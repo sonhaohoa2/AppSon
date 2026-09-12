@@ -460,36 +460,42 @@
     }
 
     function saveToGoogleSheets() {
-        let details = [];
-        members.forEach((m, idx) => {
-            if (m.selected) {
-                const amt = document.getElementById(`amount_${idx}`).innerText;
-                details.push(`${m.name} (${m.role}): ${amt}`);
-            }
-        });
+    let memberData = [];
+    members.forEach((m, idx) => {
+        if (m.selected) {
+            const amtElem = document.getElementById(`amount_${idx}`);
+            const amtText = amtElem ? amtElem.innerText : '0';
+            const cleanAmt = parseFloat(amtText.replace(/[^0-9]/g, '')) || 0;
+            memberData.push({
+                name: m.name,
+                role: m.role,
+                amount: cleanAmt
+            });
+        }
+    });
 
-        const payload = {
-            type: 'BILL',
-            date: document.getElementById('partyDate').value,
-            partyName: document.getElementById('partyName').value,
-            location: document.getElementById('partyLocation').value,
-            totalBill: parseFloat(document.getElementById('totalBill').value) || 0,
-            details: details.join(' | ')
-        };
+    const payload = {
+        type: 'BILL',
+        date: document.getElementById('partyDate').value,
+        partyName: document.getElementById('partyName').value,
+        location: document.getElementById('partyLocation').value,
+        totalBill: parseFloat(document.getElementById('totalBill').value) || 0,
+        members: memberData
+    };
 
-        alert('Đang lưu dữ liệu hóa đơn lên Google Sheets...');
+    alert('Đang lưu dữ liệu hóa đơn lên Google Sheets...');
 
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(() => {
-            alert('Đã lưu bảng tính bữa nhậu vào Google Sheets thành công!');
-        }).catch(err => {
-            alert('Lỗi khi lưu Google Sheets: ' + err);
-        });
-    }
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        alert('Đã lưu bảng tính bữa nhậu vào Google Sheets thành công!');
+    }).catch(err => {
+        alert('Lỗi khi lưu Google Sheets: ' + err);
+    });
+}
 
     switchMode('user');
 </script>
