@@ -460,27 +460,42 @@
     }
 
     function saveToGoogleSheets() {
+    const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
     let memberData = [];
+
+    // Lặp qua danh sách members để lấy người được chọn và số tiền thực tế hiển thị trên màn hình
     members.forEach((m, idx) => {
         if (m.selected) {
-            // Sửa ID đúng thành amt_${idx}
-            const amtElem = document.getElementById(`amt_${idx}`);
-            const amtText = amtElem ? amtElem.innerText : '0';
-            const cleanAmt = parseFloat(amtText.replace(/[^0-9]/g, '')) || 0;
+            // Thử lấy số tiền hiển thị ở ô kết quả tính toán
+            let amt = 0;
+            const amtElem = document.getElementById(`amt_${idx}`) || document.getElementById(`amount_${idx}`);
+            if (amtElem) {
+                amt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
+            }
+            
+            // Nếu không lấy được từ DOM, lấy từ thuộc tính m.amount hoặc m.share
+            if (!amt && m.amount) amt = m.amount;
+            if (!amt && m.share) amt = m.share;
+
             memberData.push({
                 name: m.name,
-                role: m.role,
-                amount: cleanAmt
+                role: m.role || '',
+                amount: amt
             });
         }
     });
+
+    if (memberData.length === 0) {
+        alert('Vui lòng chọn ít nhất 1 người tham gia và bấm Tính tiền trước khi lưu!');
+        return;
+    }
 
     const payload = {
         type: 'BILL',
         date: document.getElementById('partyDate').value,
         partyName: document.getElementById('partyName').value,
         location: document.getElementById('partyLocation').value,
-        totalBill: parseFloat(document.getElementById('totalBill').value) || 0,
+        totalBill: totalBill,
         members: memberData
     };
 
@@ -492,7 +507,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     }).then(() => {
-        alert('Đã lưu bảng tính bữa nhậu vào Google Sheets thành công!');
+        alert('Đã lưu dữ liệu bữa nhậu thành công!');
     }).catch(err => {
         alert('Lỗi khi lưu Google Sheets: ' + err);
     });
