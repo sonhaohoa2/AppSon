@@ -69,6 +69,7 @@
         .btn-sheets { background: #15803d; color: white; }
         .btn-share { background: var(--michelob-blue); color: white; }
         .btn-add { background: var(--corona-gold); color: #000; padding: 6px; font-weight: 700; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 12px; }
+        .btn-send-feedback { background: #d48806; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -93,6 +94,10 @@
             <div class="info-row">
                 <label>🎉 Tên bữa nhậu:</label>
                 <input type="text" id="partyName" value="Chốt Q3'26" class="admin-edit">
+            </div>
+            <div class="info-row">
+                <label>📍 Nơi nhậu:</label>
+                <input type="text" id="partyLocation" value="Quán bia Hà Nội" class="admin-edit" placeholder="Địa chỉ quán nhậu...">
             </div>
             <div class="info-row">
                 <label>💰 Tổng hóa đơn (VNĐ):</label>
@@ -125,7 +130,6 @@
             <div class="info-row" style="margin-top: 4px;"><label>Mức chi SS (Mỗi người):</label><input type="number" id="fixSs" value="400000" onchange="calculateMoney()"></div>
         </div>
 
-        <!-- Cập nhật phần Thêm thành viên với tùy chọn nhập tiền cụ thể -->
         <div class="add-guest-box" id="addGuestBox">
             <div style="font-size: 11px; font-weight: 800; color: #0050b3; margin-bottom: 6px;">➕ THÊM THÀNH VIÊN NGOÀI DANH SÁCH</div>
             <input type="text" id="newGuestName" placeholder="Tên khách (VD: Anh Nam PG)" style="width: 100%;">
@@ -170,16 +174,22 @@
                 <div class="tag" onclick="toggleTag(this)">🔥 Anh em Sales hết mình</div>
             </div>
             <textarea class="feedback-text" id="feedbackComment" placeholder="Chia sẻ thêm ý kiến của bạn..."></textarea>
+            <button class="btn-send-feedback" onclick="sendFeedback()">📩 Gửi Ý Kiến Đóng Góp</button>
         </div>
 
         <div class="btn-group">
-            <button class="btn-act btn-share" onclick="shareSummaryText()">🔗 Copy Tin Nhắn Zalo</button>
+            <button class="btn-act btn-share" onclick="copyWebLink()">🔗 Copy Link Web</button>
             <button class="btn-act btn-sheets" id="btnSaveSheets" onclick="saveToGoogleSheets()" style="display:none;">📊 Lưu Google Sheets</button>
         </div>
     </div>
 </div>
 
 <script>
+    const ADMIN_PIN = "3979"; // Mã PIN truy cập admin
+    
+    // ⚠️ Đường link Google Apps Script Web App của anh đã được tích hợp ở đây:
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzv3jfnwtyJTq1ymTC27CNRcXVxf8v6w9qdmAT3xYlakZRE9bbPqOBqD1LIqLTlpnlr/exec"; 
+
     const members = [
         { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: true, isGuest: false },
         { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: true, isGuest: false },
@@ -204,6 +214,7 @@
     ];
 
     let currentRole = 'user';
+    let currentRating = 5;
 
     function toggleCustomAmountInput() {
         const roleSel = document.getElementById('newGuestRole').value;
@@ -366,6 +377,14 @@
     }
 
     function switchMode(role) {
+        if (role === 'admin' && currentRole !== 'admin') {
+            const pin = prompt("Vui lòng nhập mã PIN Admin:");
+            if (pin !== ADMIN_PIN) {
+                alert("Mã PIN không chính xác!");
+                return;
+            }
+        }
+
         currentRole = role;
         document.getElementById('modeUser').classList.toggle('active', role === 'user');
         document.getElementById('modeAdmin').classList.toggle('active', role === 'admin');
@@ -384,44 +403,92 @@
 
     function rateParty(e) {
         if (e.target.classList.contains('star')) {
-            const v = e.target.getAttribute('data-val');
+            currentRating = parseInt(e.target.getAttribute('data-val'));
             document.querySelectorAll('.star').forEach(s => {
-                s.classList.toggle('active', s.getAttribute('data-val') <= v);
+                s.classList.toggle('active', parseInt(s.getAttribute('data-val')) <= currentRating);
             });
         }
     }
 
     function toggleTag(el) { el.classList.toggle('selected'); }
 
-    function shareSummaryText() {
-        const partyName = document.getElementById('partyName').value;
-        const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
-        const note = document.getElementById('costNote').value.trim();
-        const bankName = document.getElementById('bankName').value;
-        const bankAcc = document.getElementById('bankAcc').value;
-        const bankUser = document.getElementById('bankUser').value;
+    function sendFeedback() {
+        const name = document.getElementById('reviewerName').value.trim();
+        const comment = document.getElementById('feedbackComment').value.trim();
+        
+        if (!name) {
+            alert('Vui lòng nhập tên của bạn trước khi gửi đánh giá!');
+            return;
+        }
 
-        let msg = `🍻 THÔNG BÁO CHIA TIỀN: ${partyName.toUpperCase()}\n`;
-        msg += `💰 Tổng hóa đơn: ${totalBill.toLocaleString('vi-VN')} đ\n`;
-        if (note) msg += `📝 Ghi chú: ${note}\n`;
-        msg += `💳 STK nhận: ${bankAcc} (${bankName}) - ${bankUser}\n`;
-        msg += `-----------------------------------\n`;
+        const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected'))
+            .map(t => t.innerText).join(', ');
 
+        const payload = {
+            type: 'FEEDBACK',
+            date: document.getElementById('partyDate').value,
+            partyName: document.getElementById('partyName').value,
+            location: document.getElementById('partyLocation').value,
+            reviewer: name,
+            stars: currentRating + ' sao',
+            tags: selectedTags,
+            comment: comment
+        };
+
+        alert('Đang gửi đánh giá lên Google Sheets...');
+        
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            alert(`Cảm ơn ${name} đã gửi đóng góp ý kiến! Dữ liệu đã lưu vào Google Sheets.`);
+            document.getElementById('feedbackComment').value = '';
+        }).catch(err => {
+            alert('Lỗi kết nối Google Sheets: ' + err);
+        });
+    }
+
+    function copyWebLink() {
+        const link = "https://sonhaohoa2.github.io/AppSon/";
+        navigator.clipboard.writeText(link).then(() => {
+            alert("Đã sao chép đường link web!\n\nLink: " + link);
+        }).catch(err => {
+            prompt("Sao chép đường link bên dưới:", link);
+        });
+    }
+
+    function saveToGoogleSheets() {
+        let details = [];
         members.forEach((m, idx) => {
             if (m.selected) {
-                const amountText = document.getElementById(`amount_${idx}`).innerText;
-                msg += `👉 ${m.name} (${m.role}): ${amountText}\n`;
+                const amt = document.getElementById(`amount_${idx}`).innerText;
+                details.push(`${m.name} (${m.role}): ${amt}`);
             }
         });
 
-        msg += `-----------------------------------\nAnh em bấm "Chuyển khoản ngay" hoặc CK theo STK trên nhé!`;
+        const payload = {
+            type: 'BILL',
+            date: document.getElementById('partyDate').value,
+            partyName: document.getElementById('partyName').value,
+            location: document.getElementById('partyLocation').value,
+            totalBill: parseFloat(document.getElementById('totalBill').value) || 0,
+            details: details.join(' | ')
+        };
 
-        navigator.clipboard.writeText(msg);
-        alert('Đã sao chép danh sách chia tiền kèm ghi chú! Bạn chỉ cần dán (Paste) vào Zalo.');
-    }
+        alert('Đang lưu dữ liệu hóa đơn lên Google Sheets...');
 
-    function saveToGoogleSheets() { 
-        alert('Đã lưu dữ liệu bữa nhậu & danh sách vào Google Sheets thành công!'); 
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            alert('Đã lưu bảng tính bữa nhậu vào Google Sheets thành công!');
+        }).catch(err => {
+            alert('Lỗi khi lưu Google Sheets: ' + err);
+        });
     }
 
     switchMode('user');
