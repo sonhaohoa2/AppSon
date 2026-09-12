@@ -73,7 +73,7 @@
         .btn-add { background: var(--corona-gold); color: #000; padding: 6px; font-weight: 700; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 12px; }
         .btn-send-feedback { background: #d48806; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; }
 
-        /* Style Modal Lịch Sử */
+        /* Modal Lịch Sử */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
         .modal-content { background: #fff; width: 100%; max-width: 450px; max-height: 80vh; border-radius: 12px; padding: 16px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
@@ -112,7 +112,7 @@
             </div>
             <div class="info-row">
                 <label>📍 Nơi nhậu:</label>
-                <input type="text" id="partyLocation" value="Quán bia Hà Nội" class="admin-edit" placeholder="Địa chỉ quán nhậu...">
+                <input type="text" id="partyLocation" value="Nướng bờ tre Đông Anh" class="admin-edit" placeholder="Địa chỉ quán nhậu...">
             </div>
             <div class="info-row">
                 <label>💰 Tổng hóa đơn (VNĐ):</label>
@@ -121,7 +121,7 @@
             
             <div class="info-row" id="noteInputRow" style="display:none; margin-top:6px;">
                 <label style="font-size:11px; color:#cf1322;">📝 Ghi chú chi phí:</label>
-                <input type="text" id="costNote" placeholder="VD: Đã bao gồm 200k tiền ship bia & quà..." oninput="updateNoteDisplay()" style="font-weight:normal;">
+                <input type="text" id="costNote" placeholder="VD: Đã bao gồm 200k tiền ship..." oninput="updateNoteDisplay()" style="font-weight:normal;">
             </div>
             <div class="note-box" id="noteDisplay">
                 📌 <strong>Ghi chú:</strong> <span id="noteText">Chưa có ghi chú phát sinh.</span>
@@ -206,9 +206,7 @@
             <h3>📜 LỊCH SỬ CÁC BỮA NHẬU</h3>
             <button class="btn-close" onclick="closeHistoryModal()">✕ Đóng</button>
         </div>
-        <div id="historyList">
-            <!-- Danh sách bữa nhậu sẽ tự động hiển thị tại đây -->
-        </div>
+        <div id="historyList"></div>
     </div>
 </div>
 
@@ -216,7 +214,7 @@
     const ADMIN_PIN = "3979"; 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzv3jfnwtyJTq1ymTC27CNRcXVxf8v6w9qdmAT3xYlakZRE9bbPqOBqD1LIqLTlpnlr/exec"; 
 
-    const members = [
+    const defaultMembers = [
         { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: true, isGuest: false },
         { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: true, isGuest: false },
         { code: 'ABISF00143', name: 'LÝ HỒNG MINH', role: 'SS', selected: true, isGuest: false },
@@ -239,6 +237,7 @@
         { code: 'ABISF00769', name: 'ĐÀO MẬU DUY', role: 'SR', selected: false, isGuest: false }
     ];
 
+    let members = JSON.parse(JSON.stringify(defaultMembers));
     let currentRole = 'user';
     let currentRating = 5;
 
@@ -379,6 +378,7 @@
 
         members.forEach((m, idx) => {
             const itemRow = document.getElementById(`item_${idx}`);
+            if (!itemRow) return;
 
             if (currentRole === 'user' && !m.selected) {
                 itemRow.style.display = 'none';
@@ -476,20 +476,20 @@
         });
     }
 
-    // --- TÍNH NĂNG TẠO LINK ĐỘNG THEO DỮ LIỆU BỮA NHẬU ---
+    // --- TẠO LINK CHÍNH XÁC DỰA TRÊN MÃ NV/GUEST CODE ---
     function copyWebLink() {
         const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
         const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
         const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
         const totalBill = document.getElementById('totalBill').value || '0';
 
-        let selectedIndices = [];
-        members.forEach((m, idx) => {
-            if (m.selected) selectedIndices.push(idx);
+        let selectedCodes = [];
+        members.forEach(m => {
+            if (m.selected) selectedCodes.push(m.code);
         });
 
         const baseUrl = window.location.origin + window.location.pathname;
-        const shareUrl = `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${selectedIndices.join(',')}`;
+        const shareUrl = `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${selectedCodes.join(',')}`;
 
         navigator.clipboard.writeText(shareUrl).then(() => {
             alert("Đã sao chép đường link chia tiền bữa nhậu này!\n\nBạn có thể dán gửi vào nhóm Zalo.");
@@ -498,15 +498,14 @@
         });
     }
 
-    // --- TÍNH NĂNG QUẢN LÝ LỊCH SỬ NHẬU ---
+    // --- QUẢN LÝ LỊCH SỬ ---
     function saveToLocalHistory(partyData) {
         let history = JSON.parse(localStorage.getItem('party_history') || '[]');
         
-        // Kiểm tra xem bữa nhậu đã tồn tại chưa để cập nhật hoặc thêm mới
         const existingIdx = history.findIndex(item => item.name === partyData.partyName && item.date === partyData.date);
         
-        let selectedIndices = [];
-        members.forEach((m, idx) => { if (m.selected) selectedIndices.push(idx); });
+        let selectedCodes = [];
+        members.forEach(m => { if (m.selected) selectedCodes.push(m.code); });
 
         const historyObj = {
             id: Date.now(),
@@ -514,7 +513,7 @@
             date: partyData.date,
             loc: partyData.location,
             bill: partyData.totalBill,
-            selectedIndices: selectedIndices
+            selectedCodes: selectedCodes
         };
 
         if (existingIdx !== -1) {
@@ -538,7 +537,8 @@
             const baseUrl = window.location.origin + window.location.pathname;
 
             history.forEach(item => {
-                const itemLink = `${baseUrl}?name=${encodeURIComponent(item.name)}&date=${encodeURIComponent(item.date)}&loc=${encodeURIComponent(item.loc)}&bill=${item.bill}&m=${item.selectedIndices.join(',')}`;
+                const codesParam = item.selectedCodes ? item.selectedCodes.join(',') : '';
+                const itemLink = `${baseUrl}?name=${encodeURIComponent(item.name)}&date=${encodeURIComponent(item.date)}&loc=${encodeURIComponent(item.loc)}&bill=${item.bill}&m=${codesParam}`;
                 
                 html += `
                     <div class="history-item">
@@ -578,7 +578,6 @@
                 if (amtElem) {
                     amt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
                 }
-                if (!amt && m.amount) amt = m.amount;
 
                 memberData.push({
                     name: m.name,
@@ -602,7 +601,6 @@
             members: memberData
         };
 
-        // Tự động lưu bữa nhậu vào Lịch Sử LocalStorage khi lưu Sheets
         saveToLocalHistory(payload);
 
         alert('Đang lưu dữ liệu hóa đơn lên Google Sheets...');
@@ -619,7 +617,7 @@
         });
     }
 
-    // KHÔI PHỤC DỮ LIỆU TỪ LINK COPY KHI MỞ TRANG
+    // TỰ ĐỘNG LẤY VÀ TÍNH TOÁN LẠI CHÍNH XÁC TỪ THAM SỐ URL
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         
@@ -630,15 +628,24 @@
             if (urlParams.get('bill')) document.getElementById('totalBill').value = urlParams.get('bill');
 
             if (urlParams.has('m')) {
-                const selectedArr = urlParams.get('m').split(',').map(Number);
+                const rawParam = urlParams.get('m');
+                const selectedArr = rawParam.split(',');
+
+                // Kiểm tra truyền dạng Code hay dạng Index
+                const isCodeBased = selectedArr.some(item => isNaN(Number(item)));
+
                 members.forEach((m, idx) => {
-                    m.selected = selectedArr.includes(idx);
+                    if (isCodeBased) {
+                        m.selected = selectedArr.includes(m.code);
+                    } else {
+                        m.selected = selectedArr.includes(String(idx));
+                    }
                 });
             }
         }
-    });
 
-    switchMode('user');
+        switchMode('user');
+    });
 </script>
 
 </body>
