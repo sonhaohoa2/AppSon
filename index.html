@@ -493,31 +493,40 @@
     }
 
     function copyWebLink() {
-        const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
-        const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
-        const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
-        const totalBill = document.getElementById('totalBill').value || '0';
-        const costNote = encodeURIComponent(document.getElementById('costNote').value || '');
-
-        let encodedMembers = [];
-        members.forEach(m => {
-            if (m.selected) {
-                if (m.isGuest) {
-                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}`);
-                } else {
-                    encodedMembers.push(m.code);
-                }
-            }
-        });
-
-        const baseUrl = window.location.origin + window.location.pathname;
-        const shareUrl = `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&note=${costNote}&m=${encodedMembers.join(',')}`;
-
-        copyTextToClipboard(shareUrl).then(res => {
-            if (res) alert("Đã copy thành công đường link chứa đầy đủ danh sách, số tiền & ghi chú!\n\nBạn có thể gửi ngay vào nhóm Zalo.");
-            else prompt("Sao chép link dưới đây:", shareUrl);
-        });
+    const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
+    const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
+    const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
+    const totalBill = document.getElementById('totalBill').value || '0';
+    
+    // Lấy ghi chú từ ô input, nếu trống thì lấy từ thẻ hiển thị noteText
+    let noteInput = document.getElementById('costNote').value.trim();
+    if (!noteInput) {
+        const noteTextElem = document.getElementById('noteText');
+        if (noteTextElem && noteTextElem.innerText !== "Chưa có ghi chú phát sinh.") {
+            noteInput = noteTextElem.innerText.trim();
+        }
     }
+    const costNote = encodeURIComponent(noteInput);
+
+    let encodedMembers = [];
+    members.forEach(m => {
+        if (m.selected) {
+            if (m.isGuest) {
+                encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}`);
+            } else {
+                encodedMembers.push(m.code);
+            }
+        }
+    });
+
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&note=${costNote}&m=${encodedMembers.join(',')}`;
+
+    copyTextToClipboard(shareUrl).then(res => {
+        if (res) alert("Đã copy thành công đường link chứa đầy đủ danh sách, số tiền & ghi chú!\n\nBạn có thể gửi ngay vào nhóm Zalo.");
+        else prompt("Sao chép link dưới đây:", shareUrl);
+    });
+}
 
     function saveToLocalHistory(partyData) {
         let history = JSON.parse(localStorage.getItem('party_history') || '[]');
@@ -669,62 +678,68 @@
 
     // NẠP DỮ LIỆU TỪ LINK VÀ KHỞI TẠO
     window.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        if (urlParams.has('bill')) {
-            // Trường hợp mở Link tạo sẵn
-            if (urlParams.get('name')) document.getElementById('partyName').value = decodeURIComponent(urlParams.get('name'));
-            if (urlParams.get('date')) document.getElementById('partyDate').value = decodeURIComponent(urlParams.get('date'));
-            if (urlParams.get('loc')) document.getElementById('partyLocation').value = decodeURIComponent(urlParams.get('loc'));
-            if (urlParams.get('bill')) document.getElementById('totalBill').value = urlParams.get('bill');
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.has('bill')) {
+        if (urlParams.get('name')) document.getElementById('partyName').value = decodeURIComponent(urlParams.get('name'));
+        if (urlParams.get('date')) document.getElementById('partyDate').value = decodeURIComponent(urlParams.get('date'));
+        if (urlParams.get('loc')) document.getElementById('partyLocation').value = decodeURIComponent(urlParams.get('loc'));
+        if (urlParams.get('bill')) document.getElementById('totalBill').value = urlParams.get('bill');
 
-            if (urlParams.get('note')) {
-                const noteVal = decodeURIComponent(urlParams.get('note'));
-                document.getElementById('costNote').value = noteVal;
-                updateNoteDisplay();
-            }
-
-            if (urlParams.has('m') && urlParams.get('m').trim() !== "") {
-                const selectedArr = urlParams.get('m').split(',');
-                members.forEach(m => m.selected = false);
-
-                selectedArr.forEach(item => {
-                    if (item.startsWith('G_')) {
-                        const parts = item.split('_');
-                        const gName = decodeURIComponent(parts[1]);
-                        const gRole = parts[2];
-                        const gAmt = parseFloat(parts[3]) || 0;
-                        
-                        let guestObj = {
-                            code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
-                            name: gName,
-                            role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
-                            selected: true,
-                            isGuest: true
-                        };
-                        if (gAmt > 0) guestObj.customAmount = gAmt;
-                        members.push(guestObj);
-                    } else {
-                        const mMatch = members.find(m => m.code === item);
-                        if (mMatch) mMatch.selected = true;
-                    }
-                });
-            }
-        } else {
-            // Trường hợp truy cập link gốc (Reset dữ liệu mới)
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('partyDate').value = today;
-            document.getElementById('partyName').value = '';
-            document.getElementById('partyLocation').value = '';
-            document.getElementById('totalBill').value = '';
-            document.getElementById('costNote').value = '';
-            updateNoteDisplay();
+        // Đọc và hiển thị ghi chú từ URL
+        if (urlParams.get('note')) {
+            const noteVal = decodeURIComponent(urlParams.get('note'));
+            document.getElementById('costNote').value = noteVal;
             
-            members.forEach(m => m.selected = false);
+            // Cập nhật giao diện hiển thị ghi chú cho người xem
+            const displayBox = document.getElementById('noteDisplay');
+            const textSpan = document.getElementById('noteText');
+            if (noteVal.trim() !== "") {
+                displayBox.style.display = 'block';
+                textSpan.innerText = noteVal;
+            }
         }
 
-        switchMode('user');
-    });
+        if (urlParams.has('m') && urlParams.get('m').trim() !== "") {
+            const selectedArr = urlParams.get('m').split(',');
+            members.forEach(m => m.selected = false);
+
+            selectedArr.forEach(item => {
+                if (item.startsWith('G_')) {
+                    const parts = item.split('_');
+                    const gName = decodeURIComponent(parts[1]);
+                    const gRole = parts[2];
+                    const gAmt = parseFloat(parts[3]) || 0;
+                    
+                    let guestObj = {
+                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
+                        name: gName,
+                        role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
+                        selected: true,
+                        isGuest: true
+                    };
+                    if (gAmt > 0) guestObj.customAmount = gAmt;
+                    members.push(guestObj);
+                } else {
+                    const mMatch = members.find(m => m.code === item);
+                    if (mMatch) mMatch.selected = true;
+                }
+            });
+        }
+    } else {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('partyDate').value = today;
+        document.getElementById('partyName').value = '';
+        document.getElementById('partyLocation').value = '';
+        document.getElementById('totalBill').value = '';
+        document.getElementById('costNote').value = '';
+        updateNoteDisplay();
+        
+        members.forEach(m => m.selected = false);
+    }
+
+    switchMode('user');
+});
 </script>
 
 </body>
