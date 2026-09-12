@@ -49,7 +49,6 @@
         
         .btn-pay-now { background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 4px; white-space: nowrap; }
         .btn-opt { background: #e2e8f0; border: none; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: 4px; }
-        .btn-opt:hover { background: #cbd5e1; }
 
         .admin-panel { background: #edf2f7; border: 1px dashed var(--michelob-blue); padding: 12px; border-radius: 8px; margin-bottom: 16px; display: none; }
         .admin-panel-title { font-size: 11px; font-weight: 800; color: var(--michelob-blue); margin-bottom: 8px; text-transform: uppercase; }
@@ -83,7 +82,6 @@
         .history-title { font-weight: 700; color: #1e293b; font-size: 13px; }
         .history-info { font-size: 12px; color: #64748b; margin: 4px 0; }
         .btn-copy-item { background: #16a34a; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; display: block; text-align: center; }
-        .btn-copy-item:active { background: #15803d; }
     </style>
 </head>
 <body>
@@ -113,7 +111,7 @@
             </div>
             <div class="info-row">
                 <label>📍 Nơi nhậu:</label>
-                <input type="text" id="partyLocation" value="Nướng bờ tre Đông Anh" class="admin-edit" placeholder="Địa chỉ quán nhậu...">
+                <input type="text" id="partyLocation" value="Nướng bờ tre Đông Anh" class="admin-edit">
             </div>
             <div class="info-row">
                 <label>💰 Tổng hóa đơn (VNĐ):</label>
@@ -200,7 +198,7 @@
     </div>
 </div>
 
-<!-- Modal Bảng Lịch Sử -->
+<!-- Modal Lịch Sử -->
 <div id="historyModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header">
@@ -242,7 +240,6 @@
     let currentRole = 'user';
     let currentRating = 5;
 
-    // HÀM SAO CHÉP CHUẨN MỌI MÔI TRƯỜNG & TRÌNH DUYỆT
     function copyTextToClipboard(text) {
         if (navigator.clipboard && window.isSecureContext) {
             return navigator.clipboard.writeText(text).then(() => true).catch(() => fallbackCopyText(text));
@@ -261,11 +258,7 @@
         textArea.focus();
         textArea.select();
         let successful = false;
-        try {
-            successful = document.execCommand('copy');
-        } catch (err) {
-            successful = false;
-        }
+        try { successful = document.execCommand('copy'); } catch (err) { successful = false; }
         document.body.removeChild(textArea);
         return successful;
     }
@@ -346,7 +339,6 @@
         const m = members[idx];
         const newName = prompt('Chỉnh sửa tên khách:', m.name);
         if (newName === null) return;
-        
         m.name = newName.trim().toUpperCase() || m.name;
 
         if (m.customAmount !== undefined) {
@@ -355,7 +347,6 @@
                 m.customAmount = parseFloat(newMoney);
             }
         }
-
         renderMembers();
     }
 
@@ -471,10 +462,7 @@
         const name = document.getElementById('reviewerName').value.trim();
         const comment = document.getElementById('feedbackComment').value.trim();
         
-        if (!name) {
-            alert('Vui lòng nhập tên của bạn trước khi gửi đánh giá!');
-            return;
-        }
+        if (!name) { alert('Vui lòng nhập tên của bạn!'); return; }
 
         const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected'))
             .map(t => t.innerText).join(', ');
@@ -491,50 +479,60 @@
         };
 
         alert('Đang gửi đánh giá lên Google Sheets...');
-        
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         }).then(() => {
-            alert(`Cảm ơn ${name} đã gửi đóng góp ý kiến! Dữ liệu đã lưu vào Google Sheets.`);
+            alert(`Cảm ơn ${name} đã gửi ý kiến!`);
             document.getElementById('feedbackComment').value = '';
-        }).catch(err => {
-            alert('Lỗi kết nối Google Sheets: ' + err);
-        });
+        }).catch(err => alert('Lỗi: ' + err));
     }
 
-    // --- TẠO LINK CHÍNH XÁC & COPY ---
+    // --- TẠO URL LƯU ĐẦY ĐỦ THÔNG TIN THÀNH VIÊN & TÍNH TIỀN ---
     function generateCurrentShareUrl() {
         const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
         const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
         const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
         const totalBill = document.getElementById('totalBill').value || '0';
 
-        let selectedCodes = [];
+        let encodedMembers = [];
         members.forEach(m => {
-            if (m.selected) selectedCodes.push(m.code);
+            if (m.selected) {
+                if (m.isGuest) {
+                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}`);
+                } else {
+                    encodedMembers.push(m.code);
+                }
+            }
         });
 
         const baseUrl = window.location.origin + window.location.pathname;
-        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${selectedCodes.join(',')}`;
+        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${encodedMembers.join(',')}`;
     }
 
     function copyWebLink() {
         const shareUrl = generateCurrentShareUrl();
         copyTextToClipboard(shareUrl).then(res => {
-            if (res) alert("Đã sao chép đường link chia tiền bữa nhậu này!\n\nBạn có thể dán gửi vào nhóm Zalo.");
-            else prompt("Sao chép đường link bên dưới:", shareUrl);
+            if (res) alert("Đã copy thành công đường link chứa đầy đủ danh sách & số tiền!\n\nBạn có thể gửi ngay vào nhóm Zalo.");
+            else prompt("Sao chép link dưới đây:", shareUrl);
         });
     }
 
-    // --- QUẢN LÝ LỊCH SỬ THÔNG MINH ---
     function saveToLocalHistory(partyData) {
         let history = JSON.parse(localStorage.getItem('party_history') || '[]');
         
-        let selectedCodes = [];
-        members.forEach(m => { if (m.selected) selectedCodes.push(m.code); });
+        let encodedMembers = [];
+        members.forEach(m => {
+            if (m.selected) {
+                if (m.isGuest) {
+                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}`);
+                } else {
+                    encodedMembers.push(m.code);
+                }
+            }
+        });
 
         const historyObj = {
             id: Date.now(),
@@ -542,7 +540,7 @@
             date: partyData.date,
             loc: partyData.location,
             bill: partyData.totalBill,
-            selectedCodes: selectedCodes
+            selectedCodes: encodedMembers
         };
 
         const existingIdx = history.findIndex(item => item.name === partyData.partyName && item.date === partyData.date);
@@ -567,7 +565,7 @@
                         <div class="history-title">🍻 ${item.name || 'Bữa nhậu'}</div>
                         <div class="history-info">📅 Ngày: <strong>${item.date}</strong> | 📍 ${item.loc || 'Chưa rõ'}</div>
                         <div class="history-info">💰 Tổng bill: <strong style="color:var(--bud-red);">${Number(item.bill).toLocaleString('vi-VN')} đ</strong></div>
-                        <button class="btn-copy-item" onclick="copyHistoryItemById(${item.id})">📋 Copy Link Bữa Này</button>
+                        <button class="btn-copy-item" onclick="copyHistoryItemById(${item.id})">📋 Copy Link Đầy Đủ Chi Tiết</button>
                     </div>
                 `;
             });
@@ -594,7 +592,7 @@
         const itemLink = `${baseUrl}?name=${encodeURIComponent(item.name)}&date=${encodeURIComponent(item.date)}&loc=${encodeURIComponent(item.loc)}&bill=${item.bill}&m=${codesParam}`;
 
         copyTextToClipboard(itemLink).then(res => {
-            if (res) alert(`Đã copy thành công link bữa nhậu "${item.name}"!\nBạn có thể dán gửi Zalo ngay.`);
+            if (res) alert(`Đã copy link bữa nhậu "${item.name}"!\nChuẩn bị dán gửi Zalo.`);
             else prompt('Sao chép link bữa nhậu:', itemLink);
         });
     }
@@ -636,20 +634,16 @@
         saveToLocalHistory(payload);
 
         alert('Đang lưu dữ liệu hóa đơn lên Google Sheets...');
-
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        }).then(() => {
-            alert('Đã lưu dữ liệu bữa nhậu thành công!');
-        }).catch(err => {
-            alert('Lỗi khi lưu Google Sheets: ' + err);
-        });
+        }).then(() => alert('Đã lưu dữ liệu bữa nhậu thành công!'))
+        .catch(err => alert('Lỗi khi lưu Google Sheets: ' + err));
     }
 
-    // TỰ ĐỘNG LẤY DỮ LIỆU TỪ URL
+    // NẠP DỮ LIỆU TỪ LINK VÀ GIẢI MÃ THÀNH VIÊN
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         
@@ -659,17 +653,33 @@
             if (urlParams.get('loc')) document.getElementById('partyLocation').value = decodeURIComponent(urlParams.get('loc'));
             if (urlParams.get('bill')) document.getElementById('totalBill').value = urlParams.get('bill');
 
-            if (urlParams.has('m')) {
-                const rawParam = urlParams.get('m');
-                const selectedArr = rawParam.split(',');
+            if (urlParams.has('m') && urlParams.get('m').trim() !== "") {
+                const selectedArr = urlParams.get('m').split(',');
 
-                const isCodeBased = selectedArr.some(item => isNaN(Number(item)));
+                // Đặt mặc định bỏ chọn toàn bộ trước khi giải mã link
+                members.forEach(m => m.selected = false);
 
-                members.forEach((m, idx) => {
-                    if (isCodeBased) {
-                        m.selected = selectedArr.includes(m.code);
+                selectedArr.forEach(item => {
+                    if (item.startsWith('G_')) {
+                        // Khách ngoài
+                        const parts = item.split('_');
+                        const gName = decodeURIComponent(parts[1]);
+                        const gRole = parts[2];
+                        const gAmt = parseFloat(parts[3]) || 0;
+                        
+                        let guestObj = {
+                            code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
+                            name: gName,
+                            role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
+                            selected: true,
+                            isGuest: true
+                        };
+                        if (gAmt > 0) guestObj.customAmount = gAmt;
+                        members.push(guestObj);
                     } else {
-                        m.selected = selectedArr.includes(String(idx));
+                        // Thành viên cố định
+                        const mMatch = members.find(m => m.code === item);
+                        if (mMatch) mMatch.selected = true;
                     }
                 });
             }
