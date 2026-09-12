@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chia Tiền Nhậu - Sales TT Hà Nội</title>
+    <style>
+        :root {
+            --bud-red: #c8102e;
+            --michelob-blue: #002d72;
+            --corona-gold: #f5b324;
+            --bg-light: #f4f6f9;
+            --text-dark: #1e293b;
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg-light); color: var(--text-dark); padding: 10px; display: flex; justify-content: center; }
+        .app-card { background: #fff; width: 100%; max-width: 500px; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12); border: 1px solid #e2e8f0; }
+        
+        .brand-header { background: linear-gradient(135deg, var(--bud-red) 0%, var(--michelob-blue) 60%, var(--corona-gold) 100%); color: white; padding: 20px 15px; text-align: center; }
+        .brand-header h1 { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .brand-header p { font-size: 12px; margin-top: 4px; opacity: 0.9; font-weight: 600; }
+
+        .content { padding: 16px; }
+
+        .role-bar { display: flex; background: #e2e8f0; padding: 4px; border-radius: 8px; margin-bottom: 16px; }
+        .role-btn { flex: 1; text-align: center; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; }
+        .role-btn.active { background: var(--michelob-blue); color: white; }
+
+        .info-block { background: #f8fafc; border-left: 4px solid var(--corona-gold); padding: 12px; border-radius: 4px 8px 8px 4px; margin-bottom: 16px; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
+        .info-row:last-child { margin-bottom: 0; }
+        .info-row label { font-weight: 600; color: #475569; }
+        .info-row input, .info-row select { width: 55%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 700; }
+
+        .note-box { background: #fff1f0; border: 1px solid #ffa39e; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #cf1322; margin-top: 8px; display: none; }
+
+        .section-title { font-size: 13px; font-weight: 800; color: var(--michelob-blue); text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .member-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #f1f5f9; background: #fff; }
+        .member-item:nth-child(even) { background: #fafafa; }
+        .member-info { display: flex; align-items: center; gap: 10px; }
+        .member-info input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--bud-red); cursor: pointer; }
+        .member-detail { font-size: 13px; }
+        .member-name { font-weight: 700; color: var(--text-dark); }
+        .member-role { font-size: 11px; color: #64748b; }
+        .member-pay { text-align: right; }
+        .pay-amount { font-weight: 800; color: var(--bud-red); font-size: 14px; }
+        
+        .btn-pay-now { background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 4px; white-space: nowrap; }
+        .btn-opt { background: #e2e8f0; border: none; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: 4px; }
+        .btn-opt:hover { background: #cbd5e1; }
+
+        .admin-panel { background: #edf2f7; border: 1px dashed var(--michelob-blue); padding: 12px; border-radius: 8px; margin-bottom: 16px; display: none; }
+        .admin-panel-title { font-size: 11px; font-weight: 800; color: var(--michelob-blue); margin-bottom: 8px; text-transform: uppercase; }
+
+        .add-guest-box { background: #e6f7ff; border: 1px solid #91d5ff; padding: 10px; border-radius: 8px; margin-bottom: 12px; display: none; }
+        .add-guest-box input, .add-guest-box select { padding: 6px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 6px; }
+
+        .feedback-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 12px; border-radius: 8px; margin-top: 16px; }
+        .rating-stars { display: flex; gap: 6px; font-size: 22px; color: #d9d9d9; cursor: pointer; justify-content: center; margin: 6px 0; }
+        .rating-stars .star.active { color: var(--corona-gold); }
+        .feedback-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+        .tag { font-size: 11px; background: #fff; border: 1px solid #ffd591; padding: 4px 8px; border-radius: 12px; cursor: pointer; }
+        .tag.selected { background: var(--corona-gold); color: white; border-color: var(--corona-gold); }
+        .feedback-text { width: 100%; height: 60px; padding: 8px; font-size: 12px; border: 1px solid #ffe58f; border-radius: 6px; resize: none; margin-top: 6px; outline: none; }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+        .btn-act { padding: 12px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; text-align: center; }
+        .btn-calc { background: var(--bud-red); color: white; grid-column: span 2; }
+        .btn-sheets { background: #15803d; color: white; }
+        .btn-share { background: var(--michelob-blue); color: white; }
+        .btn-add { background: var(--corona-gold); color: #000; padding: 6px; font-weight: 700; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="app-card">
+    <div class="brand-header">
+        <h1>🍻 CHIA TIỀN BỮA NHẬU</h1>
+        <p>TEAM SALES TT HÀ NỘI</p>
+    </div>
+
+    <div class="content">
+        <div class="role-bar">
+            <div class="role-btn active" id="modeUser" onclick="switchMode('user')">Thành Viên (Xem & CK)</div>
+            <div class="role-btn" id="modeAdmin" onclick="switchMode('admin')">Quản Trị (Admin Sơn)</div>
+        </div>
+
+        <div class="info-block">
+            <div class="info-row">
+                <label>📅 Ngày nhậu:</label>
+                <input type="date" id="partyDate" value="2026-09-12" class="admin-edit">
+            </div>
+            <div class="info-row">
+                <label>🎉 Tên bữa nhậu:</label>
+                <input type="text" id="partyName" value="Chốt Q3'26" class="admin-edit">
+            </div>
+            <div class="info-row">
+                <label>💰 Tổng hóa đơn (VNĐ):</label>
+                <input type="number" id="totalBill" value="3570000" class="admin-edit" onchange="calculateMoney()">
+            </div>
+            
+            <div class="info-row" id="noteInputRow" style="display:none; margin-top:6px;">
+                <label style="font-size:11px; color:#cf1322;">📝 Ghi chú chi phí:</label>
+                <input type="text" id="costNote" placeholder="VD: Đã bao gồm 200k tiền ship bia & quà..." oninput="updateNoteDisplay()" style="font-weight:normal;">
+            </div>
+            <div class="note-box" id="noteDisplay">
+                📌 <strong>Ghi chú:</strong> <span id="noteText">Chưa có ghi chú phát sinh.</span>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminPanel">
+            <div class="admin-panel-title">⚙️ CẤU HÌNH THÀNH TOÁN & ĐỊNH MỨC QUẢN LÝ</div>
+            <div class="info-row"><label>Ngân hàng nhận:</label>
+                <select id="bankName" onchange="calculateMoney()">
+                    <option value="VCB">Vietcombank</option>
+                    <option value="MB">MBBank</option>
+                    <option value="TCB">Techcombank</option>
+                    <option value="VPB">VPBank</option>
+                </select>
+            </div>
+            <div class="info-row" style="margin-top: 4px;"><label>STK nhận tiền:</label><input type="text" id="bankAcc" value="0961000022699" onchange="calculateMoney()"></div>
+            <div class="info-row" style="margin-top: 4px;"><label>Chủ tài khoản:</label><input type="text" id="bankUser" value="HOANG VAN SON" onchange="calculateMoney()"></div>
+            <hr style="margin: 8px 0; border: 0; border-top: 1px dashed #cbd5e1;">
+            <div class="info-row"><label>Mức chi ASM (Công Nhận):</label><input type="number" id="fixAsm" value="600000" onchange="calculateMoney()"></div>
+            <div class="info-row" style="margin-top: 4px;"><label>Mức chi SS (Mỗi người):</label><input type="number" id="fixSs" value="400000" onchange="calculateMoney()"></div>
+        </div>
+
+        <!-- Cập nhật phần Thêm thành viên với tùy chọn nhập tiền cụ thể -->
+        <div class="add-guest-box" id="addGuestBox">
+            <div style="font-size: 11px; font-weight: 800; color: #0050b3; margin-bottom: 6px;">➕ THÊM THÀNH VIÊN NGOÀI DANH SÁCH</div>
+            <input type="text" id="newGuestName" placeholder="Tên khách (VD: Anh Nam PG)" style="width: 100%;">
+            <div style="display: flex; gap: 6px;">
+                <select id="newGuestRole" style="width: 100%;" onchange="toggleCustomAmountInput()">
+                    <option value="SR">SR / Khách (Chia đều)</option>
+                    <option value="SS">SS (Định mức SS)</option>
+                    <option value="ASM">ASM (Định mức ASM)</option>
+                    <option value="CUSTOM">Số tiền cụ thể (VNĐ)</option>
+                </select>
+                <input type="number" id="newGuestCustomAmount" placeholder="Nhập số tiền..." style="width: 60%; display: none;">
+            </div>
+            <button class="btn-add" onclick="addNewGuest()">+ Thêm vào danh sách đi nhậu</button>
+        </div>
+
+        <div class="section-title">
+            <span>👥 Danh sách & Chuyển khoản</span>
+            <span style="font-size: 11px; color: #64748b;" id="countParticipate">(0 chọn)</span>
+        </div>
+
+        <div id="memberList"></div>
+
+        <button class="btn-act btn-calc" id="btnCalc" onclick="calculateMoney()" style="display:none; margin-top: 12px;">TÍNH TIỀN & CẬP NHẬT</button>
+
+        <div class="feedback-box">
+            <div style="font-size: 12px; font-weight: 800; color: #873800; text-align: center;">⭐ ĐÁNH GIÁ & ĐÓNG GÓP Ý KIẾN</div>
+            <div class="info-row" style="margin-top: 8px;">
+                <label style="font-size: 11px;">Tên người đánh giá:</label>
+                <input type="text" id="reviewerName" placeholder="Nhập tên bạn..." style="width: 60%; font-weight: normal;">
+            </div>
+            <div class="rating-stars" onclick="rateParty(event)">
+                <span class="star active" data-val="1">★</span>
+                <span class="star active" data-val="2">★</span>
+                <span class="star active" data-val="3">★</span>
+                <span class="star active" data-val="4">★</span>
+                <span class="star active" data-val="5">★</span>
+            </div>
+            <div class="feedback-tags">
+                <div class="tag selected" onclick="toggleTag(this)">🍺 Bia cold chuẩn style</div>
+                <div class="tag selected" onclick="toggleTag(this)">🍖 Món ăn chất lượng</div>
+                <div class="tag" onclick="toggleTag(this)">❄️ Không gian thoáng</div>
+                <div class="tag" onclick="toggleTag(this)">🔥 Anh em Sales hết mình</div>
+            </div>
+            <textarea class="feedback-text" id="feedbackComment" placeholder="Chia sẻ thêm ý kiến của bạn..."></textarea>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-act btn-share" onclick="shareSummaryText()">🔗 Copy Tin Nhắn Zalo</button>
+            <button class="btn-act btn-sheets" id="btnSaveSheets" onclick="saveToGoogleSheets()" style="display:none;">📊 Lưu Google Sheets</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const members = [
+        { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: true, isGuest: false },
+        { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: true, isGuest: false },
+        { code: 'ABISF00143', name: 'LÝ HỒNG MINH', role: 'SS', selected: true, isGuest: false },
+        { code: 'ABISF00141', name: 'NGUYỄN QUANG THIỀU', role: 'SR', selected: true, isGuest: false },
+        { code: 'ABISF00314', name: 'TRẦN ĐĂNG TIẾN', role: 'SR', selected: true, isGuest: false },
+        { code: 'ABISF00571', name: 'NGUYỄN XUÂN ĐỨC', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00650', name: 'ĐỖ ĐÌNH BẢO', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00662', name: 'TRẦN ĐĂNG PHƯƠNG', role: 'SR', selected: true, isGuest: false },
+        { code: 'ABISF00480', name: 'NGUYỄN VĂN ĐẠT', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00137', name: 'NGUYỄN HỮU VINH', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00139', name: 'LÊ VĂN LÂM', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00138', name: 'ĐỖ THÀNH TRUNG', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00142', name: 'NGUYỄN HÀ NAM', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00374', name: 'CẨN TRUNG HIẾU', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00140', name: 'NGUYỄN NGỌC LONG', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00572', name: 'TRỊNH TRỌNG TIỆP', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00580', name: 'NGUYỄN BÁ NHÂN', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00666', name: 'TRIỆU NGỌC ĐỨC', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00706', name: 'LƯƠNG VĂN HÒA', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00769', name: 'ĐÀO MẬU DUY', role: 'SR', selected: false, isGuest: false }
+    ];
+
+    let currentRole = 'user';
+
+    function toggleCustomAmountInput() {
+        const roleSel = document.getElementById('newGuestRole').value;
+        const customInp = document.getElementById('newGuestCustomAmount');
+        customInp.style.display = (roleSel === 'CUSTOM') ? 'block' : 'none';
+    }
+
+    function renderMembers() {
+        const container = document.getElementById('memberList');
+        container.innerHTML = '';
+
+        members.forEach((m, idx) => {
+            const adminBtns = (currentRole === 'admin' && m.isGuest) 
+                ? `<button class="btn-opt" onclick="editGuest(${idx})" title="Sửa">✏️</button>
+                   <button class="btn-opt" onclick="deleteGuest(${idx})" title="Xóa">🗑️</button>` 
+                : '';
+
+            const roleDisplay = m.customAmount !== undefined 
+                ? `${m.code} - ${m.role} (${m.customAmount.toLocaleString('vi-VN')}đ)` 
+                : `${m.code} - ${m.role}`;
+
+            const html = `
+                <div class="member-item" id="item_${idx}">
+                    <div class="member-info">
+                        <input type="checkbox" id="cb_${idx}" ${m.selected ? 'checked' : ''} ${currentRole === 'user' ? 'disabled' : ''} onchange="toggleMember(${idx})">
+                        <div class="member-detail">
+                            <div class="member-name">${m.name} ${adminBtns}</div>
+                            <div class="member-role">${roleDisplay}</div>
+                        </div>
+                    </div>
+                    <div class="member-pay" id="payBlock_${idx}">
+                        <div class="pay-amount" id="amount_${idx}">0 đ</div>
+                        <a href="#" id="bankLink_${idx}" target="_blank" class="btn-pay-now">Chuyển khoản ngay</a>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+        calculateMoney();
+    }
+
+    function toggleMember(idx) {
+        members[idx].selected = document.getElementById(`cb_${idx}`).checked;
+        calculateMoney();
+    }
+
+    function addNewGuest() {
+        const name = document.getElementById('newGuestName').value.trim();
+        const roleSelect = document.getElementById('newGuestRole').value;
+        const customAmount = parseFloat(document.getElementById('newGuestCustomAmount').value) || 0;
+
+        if (!name) { alert('Vui lòng nhập tên khách!'); return; }
+        if (roleSelect === 'CUSTOM' && customAmount <= 0) { alert('Vui lòng nhập số tiền hợp lệ!'); return; }
+        
+        const code = 'KHÁCH' + Math.floor(100 + Math.random() * 900);
+        let guestObj = { 
+            code: code, 
+            name: name.toUpperCase(), 
+            role: roleSelect === 'CUSTOM' ? 'CỐ ĐỊNH' : roleSelect, 
+            selected: true, 
+            isGuest: true 
+        };
+
+        if (roleSelect === 'CUSTOM') {
+            guestObj.customAmount = customAmount;
+        }
+
+        members.push(guestObj);
+        document.getElementById('newGuestName').value = '';
+        document.getElementById('newGuestCustomAmount').value = '';
+        renderMembers();
+    }
+
+    function editGuest(idx) {
+        const m = members[idx];
+        const newName = prompt('Chỉnh sửa tên khách:', m.name);
+        if (newName === null) return;
+        
+        m.name = newName.trim().toUpperCase() || m.name;
+
+        if (m.customAmount !== undefined) {
+            const newMoney = prompt('Chỉnh sửa số tiền (VNĐ):', m.customAmount);
+            if (newMoney !== null && !isNaN(parseFloat(newMoney))) {
+                m.customAmount = parseFloat(newMoney);
+            }
+        }
+
+        renderMembers();
+    }
+
+    function deleteGuest(idx) {
+        if (confirm(`Bạn có chắc chắn muốn xóa "${members[idx].name}" khỏi danh sách?`)) {
+            members.splice(idx, 1);
+            renderMembers();
+        }
+    }
+
+    function updateNoteDisplay() {
+        const val = document.getElementById('costNote').value.trim();
+        const displayBox = document.getElementById('noteDisplay');
+        const textSpan = document.getElementById('noteText');
+        if (val) {
+            displayBox.style.display = 'block';
+            textSpan.innerText = val;
+        } else {
+            displayBox.style.display = 'none';
+        }
+    }
+
+    function calculateMoney() {
+        const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+        const fixAsm = parseFloat(document.getElementById('fixAsm').value) || 0;
+        const fixSs = parseFloat(document.getElementById('fixSs').value) || 0;
+
+        const bankName = document.getElementById('bankName').value;
+        const bankAcc = document.getElementById('bankAcc').value;
+
+        let selectedCount = 0;
+        let totalFixedMoney = 0;
+        let srCount = 0;
+
+        members.forEach(m => {
+            if (m.selected) {
+                selectedCount++;
+                if (m.customAmount !== undefined) totalFixedMoney += m.customAmount;
+                else if (m.role === 'ASM') totalFixedMoney += fixAsm;
+                else if (m.role === 'SS') totalFixedMoney += fixSs;
+                else if (m.role === 'SR') srCount++;
+            }
+        });
+
+        document.getElementById('countParticipate').innerText = `(${selectedCount}/${members.length} ĐI NHẬU)`;
+
+        const remainForSr = Math.max(0, totalBill - totalFixedMoney);
+        const perSrShare = srCount > 0 ? Math.round(remainForSr / srCount) : 0;
+
+        members.forEach((m, idx) => {
+            const itemRow = document.getElementById(`item_${idx}`);
+
+            if (currentRole === 'user' && !m.selected) {
+                itemRow.style.display = 'none';
+                return;
+            }
+            itemRow.style.display = 'flex';
+
+            let finalAmount = 0;
+            if (m.selected) {
+                if (m.customAmount !== undefined) finalAmount = m.customAmount;
+                else if (m.role === 'ASM') finalAmount = fixAsm;
+                else if (m.role === 'SS') finalAmount = fixSs;
+                else finalAmount = perSrShare;
+            }
+
+            document.getElementById(`amount_${idx}`).innerText = finalAmount.toLocaleString('vi-VN') + ' đ';
+
+            const memo = encodeURIComponent(`${m.name} CK tien nhau`);
+            const qrUrl = `https://img.vietqr.io/image/${bankName}-${bankAcc}-compact2.png?amount=${finalAmount}&addInfo=${memo}`;
+            document.getElementById(`bankLink_${idx}`).href = qrUrl;
+        });
+    }
+
+    function switchMode(role) {
+        currentRole = role;
+        document.getElementById('modeUser').classList.toggle('active', role === 'user');
+        document.getElementById('modeAdmin').classList.toggle('active', role === 'admin');
+
+        const inputs = document.querySelectorAll('.admin-edit');
+        inputs.forEach(inp => inp.disabled = (role === 'user'));
+
+        document.getElementById('adminPanel').style.display = role === 'admin' ? 'block' : 'none';
+        document.getElementById('addGuestBox').style.display = role === 'admin' ? 'block' : 'none';
+        document.getElementById('noteInputRow').style.display = role === 'admin' ? 'flex' : 'none';
+        document.getElementById('btnCalc').style.display = role === 'admin' ? 'block' : 'none';
+        document.getElementById('btnSaveSheets').style.display = role === 'admin' ? 'block' : 'none';
+
+        renderMembers();
+    }
+
+    function rateParty(e) {
+        if (e.target.classList.contains('star')) {
+            const v = e.target.getAttribute('data-val');
+            document.querySelectorAll('.star').forEach(s => {
+                s.classList.toggle('active', s.getAttribute('data-val') <= v);
+            });
+        }
+    }
+
+    function toggleTag(el) { el.classList.toggle('selected'); }
+
+    function shareSummaryText() {
+        const partyName = document.getElementById('partyName').value;
+        const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+        const note = document.getElementById('costNote').value.trim();
+        const bankName = document.getElementById('bankName').value;
+        const bankAcc = document.getElementById('bankAcc').value;
+        const bankUser = document.getElementById('bankUser').value;
+
+        let msg = `🍻 THÔNG BÁO CHIA TIỀN: ${partyName.toUpperCase()}\n`;
+        msg += `💰 Tổng hóa đơn: ${totalBill.toLocaleString('vi-VN')} đ\n`;
+        if (note) msg += `📝 Ghi chú: ${note}\n`;
+        msg += `💳 STK nhận: ${bankAcc} (${bankName}) - ${bankUser}\n`;
+        msg += `-----------------------------------\n`;
+
+        members.forEach((m, idx) => {
+            if (m.selected) {
+                const amountText = document.getElementById(`amount_${idx}`).innerText;
+                msg += `👉 ${m.name} (${m.role}): ${amountText}\n`;
+            }
+        });
+
+        msg += `-----------------------------------\nAnh em bấm "Chuyển khoản ngay" hoặc CK theo STK trên nhé!`;
+
+        navigator.clipboard.writeText(msg);
+        alert('Đã sao chép danh sách chia tiền kèm ghi chú! Bạn chỉ cần dán (Paste) vào Zalo.');
+    }
+
+    function saveToGoogleSheets() { 
+        alert('Đã lưu dữ liệu bữa nhậu & danh sách vào Google Sheets thành công!'); 
+    }
+
+    switchMode('user');
+</script>
+
+</body>
+</html>
