@@ -82,14 +82,15 @@
         .history-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #fafafa; }
         .history-title { font-weight: 700; color: #1e293b; font-size: 13px; }
         .history-info { font-size: 12px; color: #64748b; margin: 4px 0; }
-        .btn-copy-item { background: #16a34a; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; }
+        .btn-copy-item { background: #16a34a; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; display: block; text-align: center; }
+        .btn-copy-item:active { background: #15803d; }
     </style>
 </head>
 <body>
 
 <div class="app-card">
     <div class="brand-header">
-        <h1>🍻 NHẬU CÙNG Ai</h1>
+        <h1>🍻 NHẬU CÙNG AI</h1>
         <p>TEAM SALES TT HÀ NỘI</p>
     </div>
 
@@ -240,6 +241,34 @@
     let members = JSON.parse(JSON.stringify(defaultMembers));
     let currentRole = 'user';
     let currentRating = 5;
+
+    // HÀM SAO CHÉP CHUẨN MỌI MÔI TRƯỜNG & TRÌNH DUYỆT
+    function copyTextToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text).then(() => true).catch(() => fallbackCopyText(text));
+        } else {
+            return Promise.resolve(fallbackCopyText(text));
+        }
+    }
+
+    function fallbackCopyText(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        let successful = false;
+        try {
+            successful = document.execCommand('copy');
+        } catch (err) {
+            successful = false;
+        }
+        document.body.removeChild(textArea);
+        return successful;
+    }
 
     function toggleCustomAmountInput() {
         const roleSel = document.getElementById('newGuestRole').value;
@@ -476,8 +505,8 @@
         });
     }
 
-    // --- TẠO LINK CHÍNH XÁC DỰA TRÊN MÃ NV/GUEST CODE ---
-    function copyWebLink() {
+    // --- TẠO LINK CHÍNH XÁC & COPY ---
+    function generateCurrentShareUrl() {
         const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
         const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
         const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
@@ -489,20 +518,20 @@
         });
 
         const baseUrl = window.location.origin + window.location.pathname;
-        const shareUrl = `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${selectedCodes.join(',')}`;
+        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${selectedCodes.join(',')}`;
+    }
 
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            alert("Đã sao chép đường link chia tiền bữa nhậu này!\n\nBạn có thể dán gửi vào nhóm Zalo.");
-        }).catch(err => {
-            prompt("Sao chép đường link bên dưới:", shareUrl);
+    function copyWebLink() {
+        const shareUrl = generateCurrentShareUrl();
+        copyTextToClipboard(shareUrl).then(res => {
+            if (res) alert("Đã sao chép đường link chia tiền bữa nhậu này!\n\nBạn có thể dán gửi vào nhóm Zalo.");
+            else prompt("Sao chép đường link bên dưới:", shareUrl);
         });
     }
 
-    // --- QUẢN LÝ LỊCH SỬ ---
+    // --- QUẢN LÝ LỊCH SỬ THÔNG MINH ---
     function saveToLocalHistory(partyData) {
         let history = JSON.parse(localStorage.getItem('party_history') || '[]');
-        
-        const existingIdx = history.findIndex(item => item.name === partyData.partyName && item.date === partyData.date);
         
         let selectedCodes = [];
         members.forEach(m => { if (m.selected) selectedCodes.push(m.code); });
@@ -516,11 +545,9 @@
             selectedCodes: selectedCodes
         };
 
-        if (existingIdx !== -1) {
-            history[existingIdx] = historyObj;
-        } else {
-            history.unshift(historyObj);
-        }
+        const existingIdx = history.findIndex(item => item.name === partyData.partyName && item.date === partyData.date);
+        if (existingIdx !== -1) history[existingIdx] = historyObj;
+        else history.unshift(historyObj);
 
         if (history.length > 20) history = history.slice(0, 20);
         localStorage.setItem('party_history', JSON.stringify(history));
@@ -534,18 +561,13 @@
             container.innerHTML = '<p style="text-align:center; padding: 20px; color: #64748b;">Chưa có lịch sử bữa nhậu nào được lưu!</p>';
         } else {
             let html = '';
-            const baseUrl = window.location.origin + window.location.pathname;
-
             history.forEach(item => {
-                const codesParam = item.selectedCodes ? item.selectedCodes.join(',') : '';
-                const itemLink = `${baseUrl}?name=${encodeURIComponent(item.name)}&date=${encodeURIComponent(item.date)}&loc=${encodeURIComponent(item.loc)}&bill=${item.bill}&m=${codesParam}`;
-                
                 html += `
                     <div class="history-item">
                         <div class="history-title">🍻 ${item.name || 'Bữa nhậu'}</div>
                         <div class="history-info">📅 Ngày: <strong>${item.date}</strong> | 📍 ${item.loc || 'Chưa rõ'}</div>
                         <div class="history-info">💰 Tổng bill: <strong style="color:var(--bud-red);">${Number(item.bill).toLocaleString('vi-VN')} đ</strong></div>
-                        <button class="btn-copy-item" onclick="copyCustomLink('${itemLink}')">📋 Copy Link Bữa Này</button>
+                        <button class="btn-copy-item" onclick="copyHistoryItemById(${item.id})">📋 Copy Link Bữa Này</button>
                     </div>
                 `;
             });
@@ -559,11 +581,21 @@
         document.getElementById('historyModal').style.display = 'none';
     }
 
-    function copyCustomLink(link) {
-        navigator.clipboard.writeText(link).then(() => {
-            alert('Đã sao chép link của bữa nhậu này thành công!');
-        }).catch(() => {
-            prompt('Sao chép link bữa nhậu:', link);
+    function copyHistoryItemById(itemId) {
+        const history = JSON.parse(localStorage.getItem('party_history') || '[]');
+        const item = history.find(h => h.id === itemId);
+        if (!item) {
+            alert('Không tìm thấy thông tin bữa nhậu!');
+            return;
+        }
+
+        const baseUrl = window.location.origin + window.location.pathname;
+        const codesParam = item.selectedCodes ? item.selectedCodes.join(',') : '';
+        const itemLink = `${baseUrl}?name=${encodeURIComponent(item.name)}&date=${encodeURIComponent(item.date)}&loc=${encodeURIComponent(item.loc)}&bill=${item.bill}&m=${codesParam}`;
+
+        copyTextToClipboard(itemLink).then(res => {
+            if (res) alert(`Đã copy thành công link bữa nhậu "${item.name}"!\nBạn có thể dán gửi Zalo ngay.`);
+            else prompt('Sao chép link bữa nhậu:', itemLink);
         });
     }
 
@@ -617,7 +649,7 @@
         });
     }
 
-    // TỰ ĐỘNG LẤY VÀ TÍNH TOÁN LẠI CHÍNH XÁC TỪ THAM SỐ URL
+    // TỰ ĐỘNG LẤY DỮ LIỆU TỪ URL
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         
@@ -631,7 +663,6 @@
                 const rawParam = urlParams.get('m');
                 const selectedArr = rawParam.split(',');
 
-                // Kiểm tra truyền dạng Code hay dạng Index
                 const isCodeBased = selectedArr.some(item => isNaN(Number(item)));
 
                 members.forEach((m, idx) => {
