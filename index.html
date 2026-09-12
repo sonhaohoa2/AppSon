@@ -79,8 +79,10 @@
         .modal-header h3 { font-size: 16px; color: var(--michelob-blue); }
         .btn-close { background: #cbd5e1; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; }
         .history-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+        .history-header-row { display: flex; justify-content: space-between; align-items: center; }
         .history-title { font-weight: 700; color: #1e293b; font-size: 13px; }
         .history-info { font-size: 12px; color: #64748b; margin: 4px 0; }
+        .btn-delete-history { background: #ef4444; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; }
         .btn-copy-item { background: #16a34a; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; display: block; text-align: center; }
     </style>
 </head>
@@ -103,19 +105,19 @@
         <div class="info-block">
             <div class="info-row">
                 <label>📅 Ngày nhậu:</label>
-                <input type="date" id="partyDate" value="2026-09-12" class="admin-edit">
+                <input type="date" id="partyDate" class="admin-edit">
             </div>
             <div class="info-row">
                 <label>🎉 Tên bữa nhậu:</label>
-                <input type="text" id="partyName" value="Chốt Q3'26" class="admin-edit">
+                <input type="text" id="partyName" placeholder="VD: Tiệc tổng kết..." class="admin-edit">
             </div>
             <div class="info-row">
                 <label>📍 Nơi nhậu:</label>
-                <input type="text" id="partyLocation" value="Nướng bờ tre Đông Anh" class="admin-edit">
+                <input type="text" id="partyLocation" placeholder="VD: Nhậu Quán X..." class="admin-edit">
             </div>
             <div class="info-row">
                 <label>💰 Tổng hóa đơn (VNĐ):</label>
-                <input type="number" id="totalBill" value="3570000" class="admin-edit" onchange="calculateMoney()">
+                <input type="number" id="totalBill" placeholder="0" class="admin-edit" onchange="calculateMoney()">
             </div>
             
             <div class="info-row" id="noteInputRow" style="display:none; margin-top:6px;">
@@ -214,14 +216,14 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzv3jfnwtyJTq1ymTC27CNRcXVxf8v6w9qdmAT3xYlakZRE9bbPqOBqD1LIqLTlpnlr/exec"; 
 
     const defaultMembers = [
-        { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: true, isGuest: false },
-        { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: true, isGuest: false },
-        { code: 'ABISF00143', name: 'LÝ HỒNG MINH', role: 'SS', selected: true, isGuest: false },
-        { code: 'ABISF00141', name: 'NGUYỄN QUANG THIỀU', role: 'SR', selected: true, isGuest: false },
-        { code: 'ABISF00314', name: 'TRẦN ĐĂNG TIẾN', role: 'SR', selected: true, isGuest: false },
+        { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: false, isGuest: false },
+        { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: false, isGuest: false },
+        { code: 'ABISF00143', name: 'LÝ HỒNG MINH', role: 'SS', selected: false, isGuest: false },
+        { code: 'ABISF00141', name: 'NGUYỄN QUANG THIỀU', role: 'SR', selected: false, isGuest: false },
+        { code: 'ABISF00314', name: 'TRẦN ĐĂNG TIẾN', role: 'SR', selected: false, isGuest: false },
         { code: 'ABISF00571', name: 'NGUYỄN XUÂN ĐỨC', role: 'SR', selected: false, isGuest: false },
         { code: 'ABISF00650', name: 'ĐỖ ĐÌNH BẢO', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00662', name: 'TRẦN ĐĂNG PHƯƠNG', role: 'SR', selected: true, isGuest: false },
+        { code: 'ABISF00662', name: 'TRẦN ĐĂNG PHƯƠNG', role: 'SR', selected: false, isGuest: false },
         { code: 'ABISF00480', name: 'NGUYỄN VĂN ĐẠT', role: 'SR', selected: false, isGuest: false },
         { code: 'ABISF00137', name: 'NGUYỄN HỮU VINH', role: 'SR', selected: false, isGuest: false },
         { code: 'ABISF00139', name: 'LÊ VĂN LÂM', role: 'SR', selected: false, isGuest: false },
@@ -490,8 +492,7 @@
         }).catch(err => alert('Lỗi: ' + err));
     }
 
-    // --- TẠO URL LƯU ĐẦY ĐỦ THÔNG TIN THÀNH VIÊN & TÍNH TIỀN ---
-    function generateCurrentShareUrl() {
+    function copyWebLink() {
         const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
         const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
         const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
@@ -509,11 +510,8 @@
         });
 
         const baseUrl = window.location.origin + window.location.pathname;
-        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${encodedMembers.join(',')}`;
-    }
+        const shareUrl = `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${encodedMembers.join(',')}`;
 
-    function copyWebLink() {
-        const shareUrl = generateCurrentShareUrl();
         copyTextToClipboard(shareUrl).then(res => {
             if (res) alert("Đã copy thành công đường link chứa đầy đủ danh sách & số tiền!\n\nBạn có thể gửi ngay vào nhóm Zalo.");
             else prompt("Sao chép link dưới đây:", shareUrl);
@@ -551,6 +549,24 @@
         localStorage.setItem('party_history', JSON.stringify(history));
     }
 
+    // THỰC HIỆN XÓA LỊCH SỬ KHI ĐÃ ĐƯỢC XÁC THỰC
+    function deleteHistoryItem(itemId) {
+        if (currentRole !== 'admin') {
+            const pin = prompt("Chức năng chỉ dành cho Admin. Vui lòng nhập mã PIN Admin:");
+            if (pin !== ADMIN_PIN) {
+                alert("Mã PIN không chính xác! Bạn không có quyền xóa lịch sử.");
+                return;
+            }
+        }
+
+        if (confirm("XÁC NHẬN ADMIN: Bạn có chắc chắn muốn xóa hẳn bữa nhậu này khỏi lịch sử ứng dụng?")) {
+            let history = JSON.parse(localStorage.getItem('party_history') || '[]');
+            history = history.filter(item => item.id !== itemId);
+            localStorage.setItem('party_history', JSON.stringify(history));
+            openHistoryModal(); // Refresh lại danh sách modal
+        }
+    }
+
     function openHistoryModal() {
         const history = JSON.parse(localStorage.getItem('party_history') || '[]');
         const container = document.getElementById('historyList');
@@ -562,7 +578,10 @@
             history.forEach(item => {
                 html += `
                     <div class="history-item">
-                        <div class="history-title">🍻 ${item.name || 'Bữa nhậu'}</div>
+                        <div class="history-header-row">
+                            <div class="history-title">🍻 ${item.name || 'Bữa nhậu'}</div>
+                            <button class="btn-delete-history" onclick="deleteHistoryItem(${item.id})">🗑️ Xóa</button>
+                        </div>
                         <div class="history-info">📅 Ngày: <strong>${item.date}</strong> | 📍 ${item.loc || 'Chưa rõ'}</div>
                         <div class="history-info">💰 Tổng bill: <strong style="color:var(--bud-red);">${Number(item.bill).toLocaleString('vi-VN')} đ</strong></div>
                         <button class="btn-copy-item" onclick="copyHistoryItemById(${item.id})">📋 Copy Link Đầy Đủ Chi Tiết</button>
@@ -643,11 +662,12 @@
         .catch(err => alert('Lỗi khi lưu Google Sheets: ' + err));
     }
 
-    // NẠP DỮ LIỆU TỪ LINK VÀ GIẢI MÃ THÀNH VIÊN
+    // NẠP DỮ LIỆU TỪ LINK VÀ KHỞI TẠO
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         
         if (urlParams.has('bill')) {
+            // Trường hợp mở Link tạo sẵn
             if (urlParams.get('name')) document.getElementById('partyName').value = decodeURIComponent(urlParams.get('name'));
             if (urlParams.get('date')) document.getElementById('partyDate').value = decodeURIComponent(urlParams.get('date'));
             if (urlParams.get('loc')) document.getElementById('partyLocation').value = decodeURIComponent(urlParams.get('loc'));
@@ -655,13 +675,10 @@
 
             if (urlParams.has('m') && urlParams.get('m').trim() !== "") {
                 const selectedArr = urlParams.get('m').split(',');
-
-                // Đặt mặc định bỏ chọn toàn bộ trước khi giải mã link
                 members.forEach(m => m.selected = false);
 
                 selectedArr.forEach(item => {
                     if (item.startsWith('G_')) {
-                        // Khách ngoài
                         const parts = item.split('_');
                         const gName = decodeURIComponent(parts[1]);
                         const gRole = parts[2];
@@ -677,12 +694,20 @@
                         if (gAmt > 0) guestObj.customAmount = gAmt;
                         members.push(guestObj);
                     } else {
-                        // Thành viên cố định
                         const mMatch = members.find(m => m.code === item);
                         if (mMatch) mMatch.selected = true;
                     }
                 });
             }
+        } else {
+            // Trường hợp truy cập link gốc (Reset dữ liệu mới)
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('partyDate').value = today;
+            document.getElementById('partyName').value = '';
+            document.getElementById('partyLocation').value = '';
+            document.getElementById('totalBill').value = '';
+            
+            members.forEach(m => m.selected = false);
         }
 
         switchMode('user');
