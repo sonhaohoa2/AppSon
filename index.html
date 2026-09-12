@@ -22,9 +22,11 @@
 
         .content { padding: 16px; }
 
-        .role-bar { display: flex; background: #e2e8f0; padding: 4px; border-radius: 8px; margin-bottom: 16px; }
+        .role-bar { display: flex; background: #e2e8f0; padding: 4px; border-radius: 8px; margin-bottom: 12px; }
         .role-btn { flex: 1; text-align: center; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; }
         .role-btn.active { background: var(--michelob-blue); color: white; }
+
+        .btn-history-open { width: 100%; background: #2c3e50; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
         .info-block { background: #f8fafc; border-left: 4px solid var(--corona-gold); padding: 12px; border-radius: 4px 8px 8px 4px; margin-bottom: 16px; }
         .info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
@@ -70,6 +72,17 @@
         .btn-share { background: var(--michelob-blue); color: white; }
         .btn-add { background: var(--corona-gold); color: #000; padding: 6px; font-weight: 700; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 12px; }
         .btn-send-feedback { background: #d48806; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; }
+
+        /* Style Modal Lịch Sử */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
+        .modal-content { background: #fff; width: 100%; max-width: 450px; max-height: 80vh; border-radius: 12px; padding: 16px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
+        .modal-header h3 { font-size: 16px; color: var(--michelob-blue); }
+        .btn-close { background: #cbd5e1; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; }
+        .history-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+        .history-title { font-weight: 700; color: #1e293b; font-size: 13px; }
+        .history-info { font-size: 12px; color: #64748b; margin: 4px 0; }
+        .btn-copy-item { background: #16a34a; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; }
     </style>
 </head>
 <body>
@@ -85,6 +98,8 @@
             <div class="role-btn active" id="modeUser" onclick="switchMode('user')">Thành Viên (Xem & CK)</div>
             <div class="role-btn" id="modeAdmin" onclick="switchMode('admin')">Quản Trị (Admin Sơn)</div>
         </div>
+
+        <button type="button" class="btn-history-open" onclick="openHistoryModal()">📜 Xem Lịch Sử Các Bữa Nhậu</button>
 
         <div class="info-block">
             <div class="info-row">
@@ -178,16 +193,27 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn-act btn-share" onclick="copyWebLink()">🔗 Copy Link Web</button>
+            <button class="btn-act btn-share" onclick="copyWebLink()">🔗 Copy Link Bữa Này</button>
             <button class="btn-act btn-sheets" id="btnSaveSheets" onclick="saveToGoogleSheets()" style="display:none;">📊 Lưu Google Sheets</button>
         </div>
     </div>
 </div>
 
+<!-- Modal Bảng Lịch Sử -->
+<div id="historyModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>📜 LỊCH SỬ CÁC BỮA NHẬU</h3>
+            <button class="btn-close" onclick="closeHistoryModal()">✕ Đóng</button>
+        </div>
+        <div id="historyList">
+            <!-- Danh sách bữa nhậu sẽ tự động hiển thị tại đây -->
+        </div>
+    </div>
+</div>
+
 <script>
-    const ADMIN_PIN = "3979"; // Mã PIN truy cập admin
-    
-    // ⚠️ Đường link Google Apps Script Web App của anh đã được tích hợp ở đây:
+    const ADMIN_PIN = "3979"; 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzv3jfnwtyJTq1ymTC27CNRcXVxf8v6w9qdmAT3xYlakZRE9bbPqOBqD1LIqLTlpnlr/exec"; 
 
     const members = [
@@ -450,67 +476,167 @@
         });
     }
 
+    // --- TÍNH NĂNG TẠO LINK ĐỘNG THEO DỮ LIỆU BỮA NHẬU ---
     function copyWebLink() {
-        const link = "https://sonhaohoa2.github.io/AppSon/";
-        navigator.clipboard.writeText(link).then(() => {
-            alert("Đã sao chép đường link web!\n\nLink: " + link);
+        const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
+        const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
+        const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
+        const totalBill = document.getElementById('totalBill').value || '0';
+
+        let selectedIndices = [];
+        members.forEach((m, idx) => {
+            if (m.selected) selectedIndices.push(idx);
+        });
+
+        const baseUrl = window.location.origin + window.location.pathname;
+        const shareUrl = `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&m=${selectedIndices.join(',')}`;
+
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            alert("Đã sao chép đường link chia tiền bữa nhậu này!\n\nBạn có thể dán gửi vào nhóm Zalo.");
         }).catch(err => {
-            prompt("Sao chép đường link bên dưới:", link);
+            prompt("Sao chép đường link bên dưới:", shareUrl);
+        });
+    }
+
+    // --- TÍNH NĂNG QUẢN LÝ LỊCH SỬ NHẬU ---
+    function saveToLocalHistory(partyData) {
+        let history = JSON.parse(localStorage.getItem('party_history') || '[]');
+        
+        // Kiểm tra xem bữa nhậu đã tồn tại chưa để cập nhật hoặc thêm mới
+        const existingIdx = history.findIndex(item => item.name === partyData.partyName && item.date === partyData.date);
+        
+        let selectedIndices = [];
+        members.forEach((m, idx) => { if (m.selected) selectedIndices.push(idx); });
+
+        const historyObj = {
+            id: Date.now(),
+            name: partyData.partyName,
+            date: partyData.date,
+            loc: partyData.location,
+            bill: partyData.totalBill,
+            selectedIndices: selectedIndices
+        };
+
+        if (existingIdx !== -1) {
+            history[existingIdx] = historyObj;
+        } else {
+            history.unshift(historyObj);
+        }
+
+        if (history.length > 20) history = history.slice(0, 20);
+        localStorage.setItem('party_history', JSON.stringify(history));
+    }
+
+    function openHistoryModal() {
+        const history = JSON.parse(localStorage.getItem('party_history') || '[]');
+        const container = document.getElementById('historyList');
+
+        if (history.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding: 20px; color: #64748b;">Chưa có lịch sử bữa nhậu nào được lưu!</p>';
+        } else {
+            let html = '';
+            const baseUrl = window.location.origin + window.location.pathname;
+
+            history.forEach(item => {
+                const itemLink = `${baseUrl}?name=${encodeURIComponent(item.name)}&date=${encodeURIComponent(item.date)}&loc=${encodeURIComponent(item.loc)}&bill=${item.bill}&m=${item.selectedIndices.join(',')}`;
+                
+                html += `
+                    <div class="history-item">
+                        <div class="history-title">🍻 ${item.name || 'Bữa nhậu'}</div>
+                        <div class="history-info">📅 Ngày: <strong>${item.date}</strong> | 📍 ${item.loc || 'Chưa rõ'}</div>
+                        <div class="history-info">💰 Tổng bill: <strong style="color:var(--bud-red);">${Number(item.bill).toLocaleString('vi-VN')} đ</strong></div>
+                        <button class="btn-copy-item" onclick="copyCustomLink('${itemLink}')">📋 Copy Link Bữa Này</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        document.getElementById('historyModal').style.display = 'flex';
+    }
+
+    function closeHistoryModal() {
+        document.getElementById('historyModal').style.display = 'none';
+    }
+
+    function copyCustomLink(link) {
+        navigator.clipboard.writeText(link).then(() => {
+            alert('Đã sao chép link của bữa nhậu này thành công!');
+        }).catch(() => {
+            prompt('Sao chép link bữa nhậu:', link);
         });
     }
 
     function saveToGoogleSheets() {
-    const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
-    let memberData = [];
+        const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+        let memberData = [];
 
-    members.forEach((m, idx) => {
-        if (m.selected) {
-            let amt = 0;
-            // 1. Quét chính xác ID thẻ chứa số tiền đỏ trên giao diện (pay-amount)
-            const amtElem = document.getElementById(`amount_${idx}`);
-            if (amtElem) {
-                // Lấy chuỗi "600.000 đ" -> lọc chỉ giữ lại số -> 600000
-                amt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
+        members.forEach((m, idx) => {
+            if (m.selected) {
+                let amt = 0;
+                const amtElem = document.getElementById(`amount_${idx}`);
+                if (amtElem) {
+                    amt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
+                }
+                if (!amt && m.amount) amt = m.amount;
+
+                memberData.push({
+                    name: m.name,
+                    role: m.role || '',
+                    amount: amt
+                });
             }
-            
-            // 2. Dự phòng nếu thẻ DOM chưa load kịp
-            if (!amt && m.amount) amt = m.amount;
+        });
 
-            memberData.push({
-                name: m.name,
-                role: m.role || '',
-                amount: amt
-            });
+        if (memberData.length === 0) {
+            alert('Vui lòng chọn ít nhất 1 người tham gia!');
+            return;
         }
-    });
 
-    if (memberData.length === 0) {
-        alert('Vui lòng chọn ít nhất 1 người tham gia!');
-        return;
+        const payload = {
+            type: 'BILL',
+            date: document.getElementById('partyDate').value,
+            partyName: document.getElementById('partyName').value,
+            location: document.getElementById('partyLocation').value,
+            totalBill: totalBill,
+            members: memberData
+        };
+
+        // Tự động lưu bữa nhậu vào Lịch Sử LocalStorage khi lưu Sheets
+        saveToLocalHistory(payload);
+
+        alert('Đang lưu dữ liệu hóa đơn lên Google Sheets...');
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            alert('Đã lưu dữ liệu bữa nhậu thành công!');
+        }).catch(err => {
+            alert('Lỗi khi lưu Google Sheets: ' + err);
+        });
     }
 
-    const payload = {
-        type: 'BILL',
-        date: document.getElementById('partyDate').value,
-        partyName: document.getElementById('partyName').value,
-        location: document.getElementById('partyLocation').value,
-        totalBill: totalBill,
-        members: memberData
-    };
+    // KHÔI PHỤC DỮ LIỆU TỪ LINK COPY KHI MỞ TRANG
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.has('bill')) {
+            if (urlParams.get('name')) document.getElementById('partyName').value = decodeURIComponent(urlParams.get('name'));
+            if (urlParams.get('date')) document.getElementById('partyDate').value = decodeURIComponent(urlParams.get('date'));
+            if (urlParams.get('loc')) document.getElementById('partyLocation').value = decodeURIComponent(urlParams.get('loc'));
+            if (urlParams.get('bill')) document.getElementById('totalBill').value = urlParams.get('bill');
 
-    alert('Đang lưu dữ liệu hóa đơn lên Google Sheets...');
-
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    }).then(() => {
-        alert('Đã lưu dữ liệu bữa nhậu thành công!');
-    }).catch(err => {
-        alert('Lỗi khi lưu Google Sheets: ' + err);
+            if (urlParams.has('m')) {
+                const selectedArr = urlParams.get('m').split(',').map(Number);
+                members.forEach((m, idx) => {
+                    m.selected = selectedArr.includes(idx);
+                });
+            }
+        }
     });
-}
 
     switchMode('user');
 </script>
