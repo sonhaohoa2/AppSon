@@ -463,7 +463,8 @@
     let memberData = [];
     members.forEach((m, idx) => {
         if (m.selected) {
-            const amtElem = document.getElementById(`amount_${idx}`);
+            // Sửa ID đúng thành amt_${idx}
+            const amtElem = document.getElementById(`amt_${idx}`);
             const amtText = amtElem ? amtElem.innerText : '0';
             const cleanAmt = parseFloat(amtText.replace(/[^0-9]/g, '')) || 0;
             memberData.push({
