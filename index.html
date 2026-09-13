@@ -493,7 +493,7 @@
         }).catch(err => alert('Lỗi: ' + err));
     }
 
-    function copyWebLink() {
+    function buildCurrentShareUrl() {
         const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
         const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
         const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
@@ -520,8 +520,11 @@
         });
 
         const baseUrl = window.location.origin + window.location.pathname;
-        const shareUrl = `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&note=${costNote}&m=${encodedMembers.join(',')}`;
+        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&note=${costNote}&m=${encodedMembers.join(',')}`;
+    }
 
+    function copyWebLink() {
+        const shareUrl = buildCurrentShareUrl();
         copyTextToClipboard(shareUrl).then(res => {
             if (res) alert("Đã copy link bữa nhậu thành công!\nBạn có thể gửi ngay vào nhóm Zalo.");
             else prompt("Sao chép link dưới đây:", shareUrl);
@@ -615,9 +618,15 @@
 
         if (confirm("XÁC NHẬN ADMIN: Bạn có chắc chắn muốn xóa hẳn bữa nhậu này khỏi lịch sử ứng dụng?")) {
             let history = JSON.parse(localStorage.getItem('party_history') || '[]');
-            history = history.filter(item => item.id !== itemId);
+            history = history.filter(item => item.id != itemId);
             localStorage.setItem('party_history', JSON.stringify(history));
-            openHistoryModal(); 
+
+            if (window.cachedHistoryData) {
+                window.cachedHistoryData = window.cachedHistoryData.filter(item => item.id != itemId);
+                renderHistoryList(window.cachedHistoryData);
+            } else {
+                renderHistoryList(history);
+            }
         }
     }
 
@@ -627,34 +636,25 @@
             const data = await response.json();
             if (data && Array.isArray(data)) {
                 window.cachedHistoryData = data;
+                localStorage.setItem('party_history', JSON.stringify(data));
             }
         } catch (err) {
             console.log("Tải ngầm lịch sử chưa thành công:", err);
         }
     }
 
-    async function openHistoryModal() {
+    function openHistoryModal() {
         const modal = document.getElementById('historyModal');
-        const container = document.getElementById('historyList');
         if (modal) modal.style.display = 'flex';
 
-        if (window.cachedHistoryData) {
-            renderHistoryList(window.cachedHistoryData);
-            fetchHistoryBackground();
-            return;
-        }
+        // 🟢 LOAD TỨC THÌ: Lấy bộ nhớ đệm local/cache ra hiển thị trước ngay (< 0.1s)
+        let localHist = JSON.parse(localStorage.getItem('party_history') || '[]');
+        let dataToRender = window.cachedHistoryData || localHist;
+        
+        renderHistoryList(dataToRender);
 
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">⏳ Đang tải lịch sử...</div>';
-
-        try {
-            const response = await fetch(`${SCRIPT_URL}?action=getHistory`);
-            const history = await response.json();
-            window.cachedHistoryData = history;
-            renderHistoryList(history);
-        } catch (err) {
-            let localHist = JSON.parse(localStorage.getItem('party_history') || '[]');
-            renderHistoryList(localHist);
-        }
+        // Tải ngầm bản mới nhất ở phía sau
+        fetchHistoryBackground();
     }
 
     function closeHistoryModal() {
@@ -672,16 +672,17 @@
         container.innerHTML = '';
         list.forEach((item) => {
             const billFormatted = item.bill ? parseFloat(item.bill).toLocaleString('vi-VN') + 'đ' : '0đ';
+            const itemId = item.id || Date.now();
             const html = `
                 <div class="history-item">
                     <div class="history-header-row">
                         <div class="history-title">🎉 ${item.name || 'Bữa nhậu'}</div>
-                        <button class="btn-delete-history" onclick="deleteHistoryItem(${item.id})">Xóa</button>
+                        <button class="btn-delete-history" onclick="deleteHistoryItem('${itemId}')">Xóa</button>
                     </div>
                     <div class="history-info">📅 Ngày: ${item.date || 'N/A'} | 📍 Nơi: ${item.loc || 'N/A'}</div>
                     <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
                     ${item.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${item.note}</div>` : ''}
-                    <button class="btn-copy-item" onclick="loadHistoryToApp(${item.id})">🔄 Tải Bữa Này Vào Ứng Dụng</button>
+                    <button class="btn-copy-item" onclick="loadHistoryToApp('${itemId}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
                 </div>
             `;
             container.innerHTML += html;
@@ -690,9 +691,10 @@
 
     function loadHistoryToApp(itemId) {
         let history = window.cachedHistoryData || JSON.parse(localStorage.getItem('party_history') || '[]');
-        const item = history.find(h => h.id === itemId);
+        const item = history.find(h => h.id == itemId);
         if (!item) return;
 
+        // 1. Nạp dữ liệu vào các ô Input
         document.getElementById('partyName').value = item.name || '';
         document.getElementById('partyDate').value = item.date || '';
         document.getElementById('partyLocation').value = item.loc || '';
@@ -700,6 +702,7 @@
         document.getElementById('costNote').value = item.note || '';
         updateNoteDisplay();
 
+        // 2. Nạp lại danh sách thành viên
         members = JSON.parse(JSON.stringify(defaultMembers));
 
         if (item.selectedCodes && Array.isArray(item.selectedCodes)) {
@@ -724,8 +727,17 @@
             });
         }
 
+        // 3. Đóng Popup và tính toán lại tiền
         closeHistoryModal();
         renderMembers();
+
+        // 4. Cập nhật lại URL Parameter & Tự động copy link bữa nhậu đó
+        const shareUrl = buildCurrentShareUrl();
+        window.history.pushState({}, '', shareUrl);
+
+        copyTextToClipboard(shareUrl).then(res => {
+            if (res) alert(`Đã tải bữa nhậu "${item.name}" thành công!\nLink bữa nhậu đã được tự động copy vào bộ nhớ tạm.`);
+        });
     }
 
     function initFromUrlParams() {
