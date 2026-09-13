@@ -68,7 +68,7 @@
         .btn-act { padding: 12px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; text-align: center; }
         .btn-calc { background: var(--bud-red); color: white; grid-column: span 2; }
         .btn-sheets { background: #15803d; color: white; }
-        .btn-share { background: var(--michelob-blue); color: white; }
+        .btn-share { background: var(--michelob-blue); color: white; grid-column: span 2; }
         .btn-add { background: var(--corona-gold); color: #000; padding: 6px; font-weight: 700; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 12px; }
         .btn-send-feedback { background: #d48806; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; }
 
@@ -83,7 +83,7 @@
         .history-title { font-weight: 700; color: #1e293b; font-size: 13px; }
         .history-info { font-size: 12px; color: #64748b; margin: 4px 0; }
         .btn-delete-history { background: #ef4444; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; }
-        .btn-copy-item { background: #16a34a; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; display: block; text-align: center; }
+        .btn-copy-item { background: #16a34a; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; display: block; text-align: center; }
     </style>
 </head>
 <body>
@@ -122,7 +122,7 @@
             
             <div class="info-row" id="noteInputRow" style="display:none; margin-top:6px;">
                 <label style="font-size:11px; color:#cf1322;">📝 Ghi chú chi phí:</label>
-                <input type="text" id="costNote" placeholder="VD: Đã bao gồm 200k tiền ship..." oninput="updateNoteDisplay()" style="font-weight:normal;">
+                <input type="text" id="costNote" placeholder="VD: Đã bao gồm tiền ship..." oninput="updateNoteDisplay()" style="font-weight:normal;">
             </div>
             <div class="note-box" id="noteDisplay">
                 📌 <strong>Ghi chú:</strong> <span id="noteText">Chưa có ghi chú phát sinh.</span>
@@ -194,8 +194,8 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn-act btn-share" onclick="copyWebLink()">🔗 Copy Link Bữa Này</button>
-            <button class="btn-act btn-sheets" id="btnSaveSheets" onclick="saveToGoogleSheets()" style="display:none;">📊 Lưu Google Sheets</button>
+            <button class="btn-act btn-share" onclick="copyWebLink()">🔗 Copy Link Bữa Này Để Gửi Zalo</button>
+            <button class="btn-act btn-sheets" id="btnSaveSheets" onclick="saveToGoogleSheets()" style="display:none; grid-column: span 2;">📊 Lưu Google Sheets</button>
         </div>
     </div>
 </div>
@@ -241,7 +241,7 @@
     let members = JSON.parse(JSON.stringify(defaultMembers));
     let currentRole = 'user';
     let currentRating = 5;
-    window.cachedHistoryData = null;
+    window.cachedHistoryData = [];
 
     function copyTextToClipboard(text) {
         if (navigator.clipboard && window.isSecureContext) {
@@ -526,7 +526,7 @@
     function copyWebLink() {
         const shareUrl = buildCurrentShareUrl();
         copyTextToClipboard(shareUrl).then(res => {
-            if (res) alert("Đã copy link bữa nhậu thành công!\nBạn có thể gửi ngay vào nhóm Zalo.");
+            if (res) alert("Đã copy link bữa nhậu thành công!\nBạn có thể dán (Paste) để gửi ngay vào nhóm Zalo.");
             else prompt("Sao chép link dưới đây:", shareUrl);
         });
     }
@@ -545,6 +545,7 @@
 
         const selectedList = members.filter(m => m.selected).map(m => {
             return {
+                code: m.code,
                 name: m.name,
                 role: m.role,
                 amount: document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ'
@@ -590,7 +591,7 @@
         });
 
         const historyObj = {
-            id: Date.now(),
+            id: 'item_' + Date.now(),
             name: partyData.partyName,
             date: partyData.date,
             loc: partyData.location,
@@ -611,18 +612,18 @@
         if (currentRole !== 'admin') {
             const pin = prompt("Chức năng chỉ dành cho Admin. Vui lòng nhập mã PIN Admin:");
             if (pin !== ADMIN_PIN) {
-                alert("Mã PIN không chính xác! Bạn không có quyền xóa lịch sử.");
+                alert("Mã PIN không chính xác!");
                 return;
             }
         }
 
-        if (confirm("XÁC NHẬN ADMIN: Bạn có chắc chắn muốn xóa hẳn bữa nhậu này khỏi lịch sử ứng dụng?")) {
+        if (confirm("XÁC NHẬN ADMIN: Bạn có chắc chắn muốn xóa hẳn bữa nhậu này?")) {
             let history = JSON.parse(localStorage.getItem('party_history') || '[]');
-            history = history.filter(item => item.id != itemId);
+            history = history.filter(item => String(item.id) !== String(itemId));
             localStorage.setItem('party_history', JSON.stringify(history));
 
             if (window.cachedHistoryData) {
-                window.cachedHistoryData = window.cachedHistoryData.filter(item => item.id != itemId);
+                window.cachedHistoryData = window.cachedHistoryData.filter(item => String(item.id) !== String(itemId));
                 renderHistoryList(window.cachedHistoryData);
             } else {
                 renderHistoryList(history);
@@ -630,16 +631,36 @@
         }
     }
 
+    // chuẩn hóa dữ liệu từ Sheets trả về
+    function normalizeItem(raw, idx) {
+        return {
+            id: raw.id || raw.ID || ('sheet_' + idx + '_' + Date.now()),
+            name: raw.name || raw['Party Name'] || raw.partyName || raw.Name || 'Bữa nhậu',
+            date: raw.date || raw.Date || raw.partyDate || '',
+            loc: raw.loc || raw.location || raw.Location || raw.Nơi || 'N/A',
+            bill: raw.bill || raw.totalBill || raw['Total Bill'] || raw.Bill || 0,
+            note: raw.note || raw.costNote || raw.Note || '',
+            selectedCodes: raw.selectedCodes || raw.members || raw.Members || []
+        };
+    }
+
     async function fetchHistoryBackground() {
         try {
             const response = await fetch(`${SCRIPT_URL}?action=getHistory`);
             const data = await response.json();
             if (data && Array.isArray(data)) {
-                window.cachedHistoryData = data;
-                localStorage.setItem('party_history', JSON.stringify(data));
+                const normalized = data.map((item, index) => normalizeItem(item, index));
+                window.cachedHistoryData = normalized;
+                localStorage.setItem('party_history', JSON.stringify(normalized));
+                
+                // Nếu modal đang mở thì tự làm mới dữ liệu chuẩn
+                const modal = document.getElementById('historyModal');
+                if (modal && modal.style.display === 'flex') {
+                    renderHistoryList(normalized);
+                }
             }
         } catch (err) {
-            console.log("Tải ngầm lịch sử chưa thành công:", err);
+            console.log("Tải ngầm lịch sử:", err);
         }
     }
 
@@ -647,13 +668,11 @@
         const modal = document.getElementById('historyModal');
         if (modal) modal.style.display = 'flex';
 
-        // 🟢 LOAD TỨC THÌ: Lấy bộ nhớ đệm local/cache ra hiển thị trước ngay (< 0.1s)
+        // Lấy từ LocalStorage để hiện lập tức không chờ đợi
         let localHist = JSON.parse(localStorage.getItem('party_history') || '[]');
-        let dataToRender = window.cachedHistoryData || localHist;
+        let dataToRender = (window.cachedHistoryData && window.cachedHistoryData.length > 0) ? window.cachedHistoryData : localHist;
         
         renderHistoryList(dataToRender);
-
-        // Tải ngầm bản mới nhất ở phía sau
         fetchHistoryBackground();
     }
 
@@ -670,19 +689,22 @@
         }
 
         container.innerHTML = '';
-        list.forEach((item) => {
-            const billFormatted = item.bill ? parseFloat(item.bill).toLocaleString('vi-VN') + 'đ' : '0đ';
-            const itemId = item.id || Date.now();
+        list.forEach((item, index) => {
+            const normalized = normalizeItem(item, index);
+            const billNum = parseFloat(normalized.bill) || 0;
+            const billFormatted = billNum > 0 ? billNum.toLocaleString('vi-VN') + 'đ' : '0đ';
+            const safeId = String(normalized.id).replace(/'/g, "\\'");
+
             const html = `
                 <div class="history-item">
                     <div class="history-header-row">
-                        <div class="history-title">🎉 ${item.name || 'Bữa nhậu'}</div>
-                        <button class="btn-delete-history" onclick="deleteHistoryItem('${itemId}')">Xóa</button>
+                        <div class="history-title">🎉 ${normalized.name}</div>
+                        <button class="btn-delete-history" onclick="deleteHistoryItem('${safeId}')">Xóa</button>
                     </div>
-                    <div class="history-info">📅 Ngày: ${item.date || 'N/A'} | 📍 Nơi: ${item.loc || 'N/A'}</div>
+                    <div class="history-info">📅 Ngày: ${normalized.date || 'N/A'} | 📍 Nơi: ${normalized.loc || 'N/A'}</div>
                     <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
-                    ${item.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${item.note}</div>` : ''}
-                    <button class="btn-copy-item" onclick="loadHistoryToApp('${itemId}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
+                    ${normalized.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${normalized.note}</div>` : ''}
+                    <button class="btn-copy-item" onclick="loadHistoryToApp('${safeId}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
                 </div>
             `;
             container.innerHTML += html;
@@ -690,53 +712,68 @@
     }
 
     function loadHistoryToApp(itemId) {
-        let history = window.cachedHistoryData || JSON.parse(localStorage.getItem('party_history') || '[]');
-        const item = history.find(h => h.id == itemId);
-        if (!item) return;
+        let history = (window.cachedHistoryData && window.cachedHistoryData.length > 0) 
+            ? window.cachedHistoryData 
+            : JSON.parse(localStorage.getItem('party_history') || '[]');
+        
+        const rawItem = history.find(h => String(h.id) === String(itemId));
+        if (!rawItem) {
+            alert("Không tìm thấy dữ liệu bữa nhậu này!");
+            return;
+        }
 
-        // 1. Nạp dữ liệu vào các ô Input
+        const item = normalizeItem(rawItem, 0);
+
+        // 1. Điền dữ liệu vào Form
         document.getElementById('partyName').value = item.name || '';
         document.getElementById('partyDate').value = item.date || '';
-        document.getElementById('partyLocation').value = item.loc || '';
+        document.getElementById('partyLocation').value = (item.loc !== 'N/A') ? item.loc : '';
         document.getElementById('totalBill').value = item.bill || 0;
         document.getElementById('costNote').value = item.note || '';
         updateNoteDisplay();
 
-        // 2. Nạp lại danh sách thành viên
+        // 2. Phôi phục danh sách thành viên
         members = JSON.parse(JSON.stringify(defaultMembers));
 
-        if (item.selectedCodes && Array.isArray(item.selectedCodes)) {
-            item.selectedCodes.forEach(codeStr => {
-                if (codeStr.startsWith('G_')) {
-                    const parts = codeStr.split('_');
-                    const gName = decodeURIComponent(parts[1]);
-                    const gRole = parts[2];
-                    const gAmount = parseFloat(parts[3]) || 0;
-                    members.push({
-                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
-                        name: gName,
-                        role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
-                        selected: true,
-                        isGuest: true,
-                        customAmount: gAmount > 0 ? gAmount : undefined
-                    });
-                } else {
-                    const m = members.find(x => x.code === codeStr);
-                    if (m) m.selected = true;
-                }
-            });
+        let codesToSelect = [];
+        if (Array.isArray(item.selectedCodes)) {
+            codesToSelect = item.selectedCodes;
+        } else if (typeof item.selectedCodes === 'string') {
+            codesToSelect = item.selectedCodes.split(',');
         }
 
-        // 3. Đóng Popup và tính toán lại tiền
+        codesToSelect.forEach(codeObj => {
+            let codeStr = typeof codeObj === 'object' ? (codeObj.code || codeObj.name) : String(codeObj);
+            
+            if (codeStr && codeStr.startsWith('G_')) {
+                const parts = codeStr.split('_');
+                const gName = decodeURIComponent(parts[1] || 'KHÁCH');
+                const gRole = parts[2] || 'SR';
+                const gAmount = parseFloat(parts[3]) || 0;
+                members.push({
+                    code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
+                    name: gName,
+                    role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
+                    selected: true,
+                    isGuest: true,
+                    customAmount: gAmount > 0 ? gAmount : undefined
+                });
+            } else if (codeStr) {
+                const m = members.find(x => x.code === codeStr || x.name === codeStr);
+                if (m) m.selected = true;
+            }
+        });
+
+        // 3. Đóng Popup và Tính tiền
         closeHistoryModal();
         renderMembers();
 
-        // 4. Cập nhật lại URL Parameter & Tự động copy link bữa nhậu đó
+        // 4. Tạo URL Parameter và Copy Link
         const shareUrl = buildCurrentShareUrl();
         window.history.pushState({}, '', shareUrl);
 
         copyTextToClipboard(shareUrl).then(res => {
-            if (res) alert(`Đã tải bữa nhậu "${item.name}" thành công!\nLink bữa nhậu đã được tự động copy vào bộ nhớ tạm.`);
+            if (res) alert(`Đã tải bữa nhậu "${item.name}" thành công!\nLink bữa nhậu đã được copy vào bộ nhớ tạm để dán Zalo.`);
         });
     }
 
