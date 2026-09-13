@@ -718,7 +718,7 @@
         
         const rawItem = history.find(h => String(h.id) === String(itemId));
         if (!rawItem) {
-            alert("Không tìm thấy dữ liệu bữa nhậu này!");
+            alert("Dữ liệu bữa nhậu chưa sẵn sàng hoặc không tồn tại, vui lòng bấm thử lại!");
             return;
         }
 
@@ -732,7 +732,7 @@
         document.getElementById('costNote').value = item.note || '';
         updateNoteDisplay();
 
-        // 2. Phôi phục danh sách thành viên
+        // 2. Khôi phục danh sách thành viên
         members = JSON.parse(JSON.stringify(defaultMembers));
 
         let codesToSelect = [];
@@ -768,12 +768,13 @@
         closeHistoryModal();
         renderMembers();
 
-        // 4. Tạo URL Parameter và Copy Link
+        // 4. Tạo URL Parameter và Copy Link an toàn
         const shareUrl = buildCurrentShareUrl();
         window.history.pushState({}, '', shareUrl);
 
         copyTextToClipboard(shareUrl).then(res => {
             if (res) alert(`Đã tải bữa nhậu "${item.name}" thành công!\nLink bữa nhậu đã được copy vào bộ nhớ tạm để dán Zalo.`);
+            else prompt("Sao chép link dưới đây:", shareUrl);
         });
     }
 
