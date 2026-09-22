@@ -246,7 +246,7 @@
                 <button type="button" class="bank-btn" onclick="openUniversalBankApp('vp')"><span class="bank-icon">💚</span>VPBank</button>
                 <button type="button" class="bank-btn" onclick="openUniversalBankApp('icb')"><span class="bank-icon">💙</span>Vietin</button>
                 <button type="button" class="bank-btn" onclick="openUniversalBankApp('bidv')"><span class="bank-icon">💚</span>BIDV</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('vaba')"><span class="bank-icon">🤎</span>Agri</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('vaba')"><span class="bank-icon">HB</span>Agri</button>
                 <button type="button" class="bank-btn" onclick="openUniversalBankApp('acb')"><span class="bank-icon">💙</span>ACB</button>
                 <button type="button" class="bank-btn" onclick="openUniversalBankApp('tpb')"><span class="bank-icon">💜</span>TPBank</button>
                 <button type="button" class="bank-btn" onclick="openUniversalBankApp('msb')"><span class="bank-icon">🧡</span>MSB</button>
@@ -700,25 +700,27 @@
             return;
         }
 
-        const selectedList = members.filter(m => m.selected || m.selectedT2).map(m => {
-            const amountText = document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ';
-            return `${m.name} (${m.role}): ${amountText}`;
-        }).join('\n');
+        const selectedMembers = members.filter(m => m.selected || m.selectedT2).map(m => {
+            const amtText = document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ';
+            const cleanAmt = parseFloat(amtText.replace(/[^0-9]/g, '')) || 0;
+            return {
+                name: m.name,
+                role: m.role,
+                amount: cleanAmt
+            };
+        });
 
         const shareUrl = buildCurrentShareUrl();
 
         const formData = new URLSearchParams();
         formData.append('type', 'PARTY_SAVE');
-        formData.append('action', 'saveParty');
         formData.append('date', partyDate);
         formData.append('partyName', partyName);
         formData.append('location', location);
         formData.append('totalBill', totalBill + tang2Bill);
         formData.append('costNote', costNote);
-        formData.append('members', selectedList);
-        formData.append('selectedCodes', shareUrl);
-
-        saveToLocalHistory({ partyName, date: partyDate, location, totalBill, tang2Bill, costNote });
+        formData.append('membersData', JSON.stringify(selectedMembers));
+        formData.append('shareUrl', shareUrl);
 
         alert('Đang lưu thông tin bữa nhậu lên Google Sheets...');
         fetch(SCRIPT_URL, {
@@ -727,68 +729,22 @@
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData.toString()
         }).then(() => {
-            alert('Đã lưu thành công lên Google Sheets!');
+            alert('Đã lưu thành công từng thành viên lên Google Sheets!');
             setTimeout(() => {
                 fetchHistoryBackground();
             }, 1000);
         }).catch(err => alert('Lỗi khi lưu: ' + err));
     }
 
-    function saveToLocalHistory(partyData) {
-        let history = JSON.parse(localStorage.getItem('party_history') || '[]');
-        
-        const historyObj = {
-            id: 'item_' + Date.now(),
-            name: partyData.partyName,
-            date: partyData.date,
-            loc: partyData.location,
-            bill: partyData.totalBill,
-            b2: partyData.tang2Bill || 0,
-            note: partyData.costNote || '',
-            selectedCodes: buildCurrentShareUrl()
-        };
-
-        const existingIdx = history.findIndex(item => item.name === partyData.partyName && item.date === partyData.date);
-        if (existingIdx !== -1) history[existingIdx] = historyObj;
-        else history.unshift(historyObj);
-
-        if (history.length > 20) history = history.slice(0, 20);
-        localStorage.setItem('party_history', JSON.stringify(history));
-    }
-
-    function deleteHistoryItem(itemId) {
-        if (currentRole !== 'admin') {
-            const pin = prompt("Chức năng chỉ dành cho Admin. Vui lòng nhập mã PIN Admin:");
-            if (pin !== ADMIN_PIN) {
-                alert("Mã PIN không chính xác!");
-                return;
-            }
-        }
-
-        if (confirm("XÁC NHẬN ADMIN: Bạn có chắc chắn muốn xóa hẳn bữa nhậu này?")) {
-            let history = JSON.parse(localStorage.getItem('party_history') || '[]');
-            history = history.filter(item => String(item.id) !== String(itemId));
-            localStorage.setItem('party_history', JSON.stringify(history));
-
-            if (window.cachedHistoryData) {
-                window.cachedHistoryData = window.cachedHistoryData.filter(item => String(item.id) !== String(itemId));
-                renderHistoryList(window.cachedHistoryData);
-            } else {
-                renderHistoryList(history);
-            }
-        }
-    }
-
     function normalizeItem(raw, idx) {
         return {
-            id: raw.id || raw.ID || ('sheet_' + idx + '_' + Date.now()),
-            name: raw.name || raw['Party Name'] || raw.partyName || raw.Name || 'Bữa nhậu',
-            date: raw.date || raw.Date || raw.partyDate || '',
-            loc: raw.loc || raw.location || raw.Location || raw.Nơi || 'N/A',
-            bill: raw.bill || raw.totalBill || raw['Total Bill'] || raw.Bill || 0,
-            b2: raw.b2 || raw.tang2Bill || 0,
-            note: raw.note || raw.costNote || raw.Note || '',
-            selectedCodes: raw.selectedCodes || raw.url || raw.Link || raw.members || []
+            id: raw.id || ('sheet_' + idx),
+            name: raw.name || raw['Tên bữa nhậu'] || 'Bữa nhậu',
+            date: raw.date || raw['Ngày nhậu'] || '',
+            loc: raw.loc || raw['Địa điểm'] || 'N/A',
+            bill: raw.bill || raw['Tổng bill'] || 0,
+            note: raw.note || raw['Ghi chú Bill'] || '',
+            selectedCodes: raw.selectedCodes || raw.shareUrl || ''
         };
     }
 
@@ -799,7 +755,6 @@
             if (data && Array.isArray(data)) {
                 const normalized = data.map((item, index) => normalizeItem(item, index));
                 window.cachedHistoryData = normalized;
-                localStorage.setItem('party_history', JSON.stringify(normalized));
                 
                 const modal = document.getElementById('historyModal');
                 if (modal && modal.style.display === 'flex') {
@@ -815,10 +770,9 @@
         const modal = document.getElementById('historyModal');
         if (modal) modal.style.display = 'flex';
 
-        let localHist = JSON.parse(localStorage.getItem('party_history') || '[]');
-        let dataToRender = (window.cachedHistoryData && window.cachedHistoryData.length > 0) ? window.cachedHistoryData : localHist;
-        
-        renderHistoryList(dataToRender);
+        if (window.cachedHistoryData && window.cachedHistoryData.length > 0) {
+            renderHistoryList(window.cachedHistoryData);
+        }
         fetchHistoryBackground();
     }
 
@@ -837,7 +791,7 @@
         container.innerHTML = '';
         list.forEach((item, index) => {
             const normalized = normalizeItem(item, index);
-            const billNum = (parseFloat(normalized.bill) || 0) + (parseFloat(normalized.b2) || 0);
+            const billNum = parseFloat(normalized.bill) || 0;
             const billFormatted = billNum > 0 ? billNum.toLocaleString('vi-VN') + 'đ' : '0đ';
             const safeId = String(normalized.id).replace(/'/g, "\\'");
 
@@ -845,7 +799,6 @@
                 <div class="history-item">
                     <div class="history-header-row">
                         <div class="history-title">🎉 ${normalized.name}</div>
-                        <button class="btn-delete-history" onclick="deleteHistoryItem('${safeId}')">Xóa</button>
                     </div>
                     <div class="history-info">📅 Ngày: ${normalized.date || 'N/A'} | 📍 Nơi: ${normalized.loc || 'N/A'}</div>
                     <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
@@ -858,10 +811,7 @@
     }
 
     function loadHistoryToApp(itemId) {
-        let history = (window.cachedHistoryData && window.cachedHistoryData.length > 0) 
-            ? window.cachedHistoryData 
-            : JSON.parse(localStorage.getItem('party_history') || '[]');
-        
+        let history = window.cachedHistoryData || [];
         const rawItem = history.find(h => String(h.id) === String(itemId));
         if (!rawItem) {
             alert("Không tìm thấy dữ liệu bữa nhậu này!");
@@ -870,75 +820,11 @@
 
         const item = normalizeItem(rawItem, 0);
 
-        if (typeof item.selectedCodes === 'string' && item.selectedCodes.includes('http')) {
+        if (item.selectedCodes && item.selectedCodes.startsWith('http')) {
             window.location.href = item.selectedCodes;
-            return;
+        } else {
+            alert("Bữa nhậu cũ chưa có link URL lưu trên Google Sheets!");
         }
-
-        document.getElementById('partyName').value = item.name || '';
-        document.getElementById('partyDate').value = item.date || '';
-        document.getElementById('partyLocation').value = (item.loc !== 'N/A') ? item.loc : '';
-        document.getElementById('totalBill').value = item.bill || 0;
-        document.getElementById('tang2Bill').value = item.b2 || 0;
-        document.getElementById('costNote').value = item.note || '';
-        updateNoteDisplay();
-
-        members = JSON.parse(JSON.stringify(defaultMembers));
-
-        let codesToSelect = [];
-        if (Array.isArray(item.selectedCodes)) {
-            codesToSelect = item.selectedCodes;
-        } else if (typeof item.selectedCodes === 'string') {
-            codesToSelect = item.selectedCodes.split(',');
-        }
-
-        codesToSelect.forEach(codeObj => {
-            let codeStr = typeof codeObj === 'object' ? (codeObj.code || codeObj.name) : String(codeObj);
-            
-            if (codeStr) {
-                let parts = codeStr.split('_');
-                let mainCode = parts[0];
-                let customVal = parts.length > 2 ? parseFloat(parts[1]) : undefined;
-                let flags = parts[parts.length - 1];
-
-                let isT1 = flags.includes('T1') || !flags.includes('T2');
-                let isT2 = flags.includes('T2');
-
-                if (mainCode === 'G') {
-                    const gName = decodeURIComponent(parts[1] || 'KHÁCH');
-                    const gRole = parts[2] || 'SR';
-                    const gAmount = parseFloat(parts[3]) || 0;
-                    members.push({
-                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
-                        name: gName,
-                        role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
-                        selected: isT1,
-                        selectedT2: isT2,
-                        isGuest: true,
-                        customAmount: gAmount > 0 ? gAmount : undefined
-                    });
-                } else {
-                    const m = members.find(x => x.code === mainCode || x.name === mainCode);
-                    if (m) {
-                        m.selected = isT1;
-                        m.selectedT2 = isT2;
-                        if (customVal !== undefined && !isNaN(customVal)) {
-                            m.customAmount = customVal;
-                        }
-                    }
-                }
-            }
-        });
-
-        closeHistoryModal();
-        renderMembers();
-
-        const shareUrl = buildCurrentShareUrl();
-        window.history.pushState({}, '', shareUrl);
-
-        copyTextToClipboard(shareUrl).then(res => {
-            if (res) alert(`Đã tải bữa nhậu "${item.name}" thành công!\nLink bữa nhậu đã được copy vào bộ nhớ tạm để dán Zalo.`);
-        });
     }
 
     function initFromUrlParams() {
