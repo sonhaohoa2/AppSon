@@ -39,14 +39,15 @@
         .section-title { font-size: 13px; font-weight: 800; color: var(--michelob-blue); text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; }
         .member-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #f1f5f9; background: #fff; }
         .member-item:nth-child(even) { background: #fafafa; }
-        .member-info { display: flex; align-items: center; gap: 10px; }
+        .member-info { display: flex; align-items: center; gap: 8px; }
         .member-info input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--bud-red); cursor: pointer; }
         .member-detail { font-size: 13px; }
         .member-name { font-weight: 700; color: var(--text-dark); }
         .member-role { font-size: 11px; color: #64748b; }
         .member-pay { text-align: right; }
         .pay-amount { font-weight: 800; color: var(--bud-red); font-size: 14px; }
-        
+        .tang2-note { font-size: 11px; color: #dc2626; font-weight: 700; margin-top: 1px; }
+
         .btn-pay-now { background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 4px; white-space: nowrap; }
         .btn-opt { background: #e2e8f0; border: none; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: 4px; }
 
@@ -72,9 +73,9 @@
         .btn-add { background: var(--corona-gold); color: #000; padding: 6px; font-weight: 700; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 12px; }
         .btn-send-feedback { background: #d48806; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; }
 
-        /* Modal Lịch Sử */
+        /* Modal Popup */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
-        .modal-content { background: #fff; width: 100%; max-width: 450px; max-height: 80vh; border-radius: 12px; padding: 16px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content { background: #fff; width: 100%; max-width: 450px; max-height: 85vh; border-radius: 12px; padding: 16px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
         .modal-header h3 { font-size: 16px; color: var(--michelob-blue); }
         .btn-close { background: #cbd5e1; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; }
@@ -84,6 +85,8 @@
         .history-info { font-size: 12px; color: #64748b; margin: 4px 0; }
         .btn-delete-history { background: #ef4444; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; }
         .btn-copy-item { background: #16a34a; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; display: block; text-align: center; }
+        
+        .qr-popup-img { width: 100%; max-width: 280px; border-radius: 12px; border: 1px solid #e2e8f0; margin: 10px auto; display: block; }
     </style>
 </head>
 <body>
@@ -116,8 +119,13 @@
                 <input type="text" id="partyLocation" placeholder="VD: Nhậu Quán X..." class="admin-edit">
             </div>
             <div class="info-row">
-                <label>💰 Tổng hóa đơn (VNĐ):</label>
+                <label>💰 Bill Tăng 1 (VNĐ):</label>
                 <input type="number" id="totalBill" placeholder="0" class="admin-edit" onchange="calculateMoney()">
+            </div>
+            <!-- Bổ sung Bill Tăng 2 -->
+            <div class="info-row" id="tang2Row" style="display:none; background:#fff7ed; padding:4px 6px; border-radius:6px; border:1px solid #ffedd5;">
+                <label style="color:#c2410c;">🔥 Bill Tăng 2 (VNĐ):</label>
+                <input type="number" id="tang2Bill" placeholder="0" class="admin-edit" onchange="calculateMoney()" style="border-color:#fdba74;">
             </div>
             
             <div class="info-row" id="noteInputRow" style="display:none; margin-top:6px;">
@@ -211,36 +219,54 @@
     </div>
 </div>
 
+<!-- Modal Popup Quét QR Thanh Toán -->
+<div id="qrModal" class="modal-overlay">
+    <div class="modal-content" style="text-align: center;">
+        <div class="modal-header">
+            <h3 id="qrModalTitle">📲 MÃ QUÉT CHUYỂN KHẢOẢN</h3>
+            <button class="btn-close" onclick="closeQrModal()">✕ Đóng</button>
+        </div>
+        <div id="qrModalBody">
+            <p style="font-size:13px; font-weight:700; color:#1e293b;" id="qrMemberName"></p>
+            <p style="font-size:18px; font-weight:800; color:#c8102e; margin:4px 0;" id="qrAmountDisplay"></p>
+            <img id="qrImageDisplay" src="" class="qr-popup-img" alt="Mã QR Chuyển Khoản">
+            <p style="font-size:11px; color:#64748b; margin-bottom:12px;">Mở ứng dụng Ngân hàng bất kỳ trên điện thoại để quét mã QR</p>
+            <button type="button" class="btn-act btn-share" style="width:100%; margin-bottom:6px;" onclick="copyQrInfo()">📋 Copy Số TK & Số Tiền</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const ADMIN_PIN = "3979"; 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzv3jfnwtyJTq1ymTC27CNRcXVxf8v6w9qdmAT3xYlakZRE9bbPqOBqD1LIqLTlpnlr/exec"; 
 
     const defaultMembers = [
-        { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: false, isGuest: false },
-        { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: false, isGuest: false },
-        { code: 'ABISF00143', name: 'LÝ HỒNG MINH', role: 'SS', selected: false, isGuest: false },
-        { code: 'ABISF00141', name: 'NGUYỄN QUANG THIỀU', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00314', name: 'TRẦN ĐĂNG TIẾN', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00571', name: 'NGUYỄN XUÂN ĐỨC', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00650', name: 'ĐỖ ĐÌNH BẢO', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00662', name: 'TRẦN ĐĂNG PHƯƠNG', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00480', name: 'NGUYỄN VĂN ĐẠT', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00137', name: 'NGUYỄN HỮU VINH', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00139', name: 'LÊ VĂN LÂM', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00138', name: 'ĐỖ THÀNH TRUNG', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00142', name: 'NGUYỄN HÀ NAM', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00374', name: 'CẨN TRUNG HIẾU', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00140', name: 'NGUYỄN NGỌC LONG', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00572', name: 'TRỊNH TRỌNG TIỆP', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00580', name: 'NGUYỄN BÁ NHÂN', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00666', name: 'TRIỆU NGỌC ĐỨC', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00706', name: 'LƯƠNG VĂN HÒA', role: 'SR', selected: false, isGuest: false },
-        { code: 'ABISF00769', name: 'ĐÀO MẬU DUY', role: 'SR', selected: false, isGuest: false }
+        { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00143', name: 'LÝ HỒNG MINH', role: 'SS', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00141', name: 'NGUYỄN QUANG THIỀU', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00314', name: 'TRẦN ĐĂNG TIẾN', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00571', name: 'NGUYỄN XUÂN ĐỨC', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00650', name: 'ĐỖ ĐÌNH BẢO', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00662', name: 'TRẦN ĐĂNG PHƯƠNG', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00480', name: 'NGUYỄN VĂN ĐẠT', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00137', name: 'NGUYỄN HỮU VINH', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00139', name: 'LÊ VĂN LÂM', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00138', name: 'ĐỖ THÀNH TRUNG', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00142', name: 'NGUYỄN HÀ NAM', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00374', name: 'CẨN TRUNG HIẾU', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00140', name: 'NGUYỄN NGỌC LONG', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00572', name: 'TRỊNH TRỌNG TIỆP', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00580', name: 'NGUYỄN BÁ NHÂN', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00666', name: 'TRIỆU NGỌC ĐỨC', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00706', name: 'LƯƠNG VĂN HÒA', role: 'SR', selected: false, isGuest: false, selectedT2: false },
+        { code: 'ABISF00769', name: 'ĐÀO MẬU DUY', role: 'SR', selected: false, isGuest: false, selectedT2: false }
     ];
 
     let members = JSON.parse(JSON.stringify(defaultMembers));
     let currentRole = 'user';
     let currentRating = 5;
+    let currentPayInfo = { name: '', amount: 0, qrUrl: '' };
     window.cachedHistoryData = [];
 
     function copyTextToClipboard(text) {
@@ -282,6 +308,10 @@
                    <button class="btn-opt" onclick="deleteGuest(${idx})" title="Xóa">🗑️</button>` 
                 : '';
 
+            const tang2Checkbox = (currentRole === 'admin')
+                ? `<label style="font-size:11px; margin-left:8px; color:#c2410c; cursor:pointer;"><input type="checkbox" id="cbT2_${idx}" ${m.selectedT2 ? 'checked' : ''} onchange="toggleMemberT2(${idx})"> Tăng 2</label>`
+                : '';
+
             const roleDisplay = m.customAmount !== undefined 
                 ? `${m.code} - ${m.role} (${m.customAmount.toLocaleString('vi-VN')}đ)` 
                 : `${m.code} - ${m.role}`;
@@ -291,13 +321,14 @@
                     <div class="member-info">
                         <input type="checkbox" id="cb_${idx}" ${m.selected ? 'checked' : ''} ${currentRole === 'user' ? 'disabled' : ''} onchange="toggleMember(${idx})">
                         <div class="member-detail">
-                            <div class="member-name">${m.name} ${adminBtns}</div>
+                            <div class="member-name">${m.name} ${adminBtns} ${tang2Checkbox}</div>
                             <div class="member-role">${roleDisplay}</div>
                         </div>
                     </div>
                     <div class="member-pay" id="payBlock_${idx}">
                         <div class="pay-amount" id="amount_${idx}">0 đ</div>
-                        <a href="#" id="bankLink_${idx}" target="_blank" class="btn-pay-now">Chuyển khoản ngay</a>
+                        <div class="tang2-note" id="tang2Note_${idx}" style="display:none;"></div>
+                        <button type="button" class="btn-pay-now" onclick="openQrModal(${idx})">Chuyển khoản ngay</button>
                     </div>
                 </div>
             `;
@@ -309,6 +340,45 @@
     function toggleMember(idx) {
         members[idx].selected = document.getElementById(`cb_${idx}`).checked;
         calculateMoney();
+    }
+
+    function toggleMemberT2(idx) {
+        members[idx].selectedT2 = document.getElementById(`cbT2_${idx}`).checked;
+        calculateMoney();
+    }
+
+    function openQrModal(idx) {
+        const m = members[idx];
+        const bankName = document.getElementById('bankName').value;
+        const bankAcc = document.getElementById('bankAcc').value;
+        
+        let amt = 0;
+        const amtElem = document.getElementById(`amount_${idx}`);
+        if (amtElem) {
+            amt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
+        }
+
+        const memo = encodeURIComponent(`${m.name} CK tien nhau`);
+        const qrUrl = `https://img.vietqr.io/image/${bankName}-${bankAcc}-compact2.png?amount=${amt}&addInfo=${memo}`;
+
+        currentPayInfo = { name: m.name, amount: amt, qrUrl: qrUrl };
+
+        document.getElementById('qrMemberName').innerText = `Thành viên: ${m.name}`;
+        document.getElementById('qrAmountDisplay').innerText = `${amt.toLocaleString('vi-VN')} VNĐ`;
+        document.getElementById('qrImageDisplay').src = qrUrl;
+        document.getElementById('qrModal').style.display = 'flex';
+    }
+
+    function closeQrModal() {
+        document.getElementById('qrModal').style.display = 'none';
+    }
+
+    function copyQrInfo() {
+        const bankAcc = document.getElementById('bankAcc').value;
+        const infoStr = `STK: ${bankAcc} | Số tiền: ${currentPayInfo.amount.toLocaleString('vi-VN')} đ | Nội dung: ${currentPayInfo.name} CK tien nhau`;
+        copyTextToClipboard(infoStr).then(() => {
+            alert("Đã copy thông tin tài khoản và số tiền vào bộ nhớ tạm!");
+        });
     }
 
     function addNewGuest() {
@@ -325,6 +395,7 @@
             name: name.toUpperCase(), 
             role: roleSelect === 'CUSTOM' ? 'CỐ ĐỊNH' : roleSelect, 
             selected: true, 
+            selectedT2: false,
             isGuest: true 
         };
 
@@ -374,15 +445,14 @@
 
     function calculateMoney() {
         const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+        const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
         const fixAsm = parseFloat(document.getElementById('fixAsm').value) || 0;
         const fixSs = parseFloat(document.getElementById('fixSs').value) || 0;
-
-        const bankName = document.getElementById('bankName').value;
-        const bankAcc = document.getElementById('bankAcc').value;
 
         let selectedCount = 0;
         let totalFixedMoney = 0;
         let srCount = 0;
+        let t2Count = 0;
 
         members.forEach(m => {
             if (m.selected) {
@@ -392,36 +462,52 @@
                 else if (m.role === 'SS') totalFixedMoney += fixSs;
                 else if (m.role === 'SR') srCount++;
             }
+            if (m.selectedT2) {
+                t2Count++;
+            }
         });
 
         document.getElementById('countParticipate').innerText = `(${selectedCount}/${members.length} ĐI NHẬU)`;
 
         const remainForSr = Math.max(0, totalBill - totalFixedMoney);
         const perSrShare = srCount > 0 ? Math.round(remainForSr / srCount) : 0;
+        const perT2Share = (t2Count > 0 && tang2Bill > 0) ? Math.round(tang2Bill / t2Count) : 0;
 
         members.forEach((m, idx) => {
             const itemRow = document.getElementById(`item_${idx}`);
             if (!itemRow) return;
 
-            if (currentRole === 'user' && !m.selected) {
+            const isParticipated = m.selected || m.selectedT2;
+
+            if (currentRole === 'user' && !isParticipated) {
                 itemRow.style.display = 'none';
                 return;
             }
             itemRow.style.display = 'flex';
 
-            let finalAmount = 0;
+            let t1Amount = 0;
             if (m.selected) {
-                if (m.customAmount !== undefined) finalAmount = m.customAmount;
-                else if (m.role === 'ASM') finalAmount = fixAsm;
-                else if (m.role === 'SS') finalAmount = fixSs;
-                else finalAmount = perSrShare;
+                if (m.customAmount !== undefined) t1Amount = m.customAmount;
+                else if (m.role === 'ASM') t1Amount = fixAsm;
+                else if (m.role === 'SS') t1Amount = fixSs;
+                else t1Amount = perSrShare;
             }
+
+            let t2Amount = m.selectedT2 ? perT2Share : 0;
+            let finalAmount = t1Amount + t2Amount;
 
             document.getElementById(`amount_${idx}`).innerText = finalAmount.toLocaleString('vi-VN') + ' đ';
 
-            const memo = encodeURIComponent(`${m.name} CK tien nhau`);
-            const qrUrl = `https://img.vietqr.io/image/${bankName}-${bankAcc}-compact2.png?amount=${finalAmount}&addInfo=${memo}`;
-            document.getElementById(`bankLink_${idx}`).href = qrUrl;
+            // Dòng ghi chú Tăng 2 màu đỏ cho thành viên
+            const t2NoteElem = document.getElementById(`tang2Note_${idx}`);
+            if (t2NoteElem) {
+                if (t2Amount > 0) {
+                    t2NoteElem.style.display = 'block';
+                    t2NoteElem.innerText = `* +${t2Amount.toLocaleString('vi-VN')}đ (Tăng 2)`;
+                } else {
+                    t2NoteElem.style.display = 'none';
+                }
+            }
         });
     }
 
@@ -444,6 +530,7 @@
         document.getElementById('adminPanel').style.display = role === 'admin' ? 'block' : 'none';
         document.getElementById('addGuestBox').style.display = role === 'admin' ? 'block' : 'none';
         document.getElementById('noteInputRow').style.display = role === 'admin' ? 'flex' : 'none';
+        document.getElementById('tang2Row').style.display = role === 'admin' ? 'flex' : 'none';
         document.getElementById('btnCalc').style.display = role === 'admin' ? 'block' : 'none';
         document.getElementById('btnSaveSheets').style.display = role === 'admin' ? 'block' : 'none';
 
@@ -498,6 +585,7 @@
         const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
         const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
         const totalBill = document.getElementById('totalBill').value || '0';
+        const tang2Bill = document.getElementById('tang2Bill').value || '0';
         
         let noteInput = document.getElementById('costNote').value.trim();
         if (!noteInput) {
@@ -510,17 +598,22 @@
 
         let encodedMembers = [];
         members.forEach(m => {
-            if (m.selected) {
+            if (m.selected || m.selectedT2) {
+                let flags = [];
+                if (m.selected) flags.push('T1');
+                if (m.selectedT2) flags.push('T2');
+                const flagStr = flags.join('&');
+
                 if (m.isGuest) {
-                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}`);
+                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}_${flagStr}`);
                 } else {
-                    encodedMembers.push(m.code);
+                    encodedMembers.push(`${m.code}_${flagStr}`);
                 }
             }
         });
 
         const baseUrl = window.location.origin + window.location.pathname;
-        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&note=${costNote}&m=${encodedMembers.join(',')}`;
+        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&b2=${tang2Bill}&note=${costNote}&m=${encodedMembers.join(',')}`;
     }
 
     function copyWebLink() {
@@ -536,6 +629,7 @@
         const partyDate = document.getElementById('partyDate').value;
         const location = document.getElementById('partyLocation').value.trim();
         const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+        const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
         const costNote = document.getElementById('costNote').value.trim();
 
         if (!partyName || !partyDate) {
@@ -543,7 +637,7 @@
             return;
         }
 
-        const selectedList = members.filter(m => m.selected).map(m => {
+        const selectedList = members.filter(m => m.selected || m.selectedT2).map(m => {
             return {
                 code: m.code,
                 name: m.name,
@@ -557,12 +651,12 @@
             date: partyDate,
             partyName: partyName,
             location: location,
-            totalBill: totalBill,
+            totalBill: totalBill + tang2Bill,
             costNote: costNote,
             members: selectedList
         };
 
-        saveToLocalHistory({ partyName, date: partyDate, location, totalBill, costNote });
+        saveToLocalHistory({ partyName, date: partyDate, location, totalBill, tang2Bill, costNote });
 
         alert('Đang lưu thông tin bữa nhậu lên Google Sheets...');
         fetch(SCRIPT_URL, {
@@ -581,11 +675,16 @@
         
         let encodedMembers = [];
         members.forEach(m => {
-            if (m.selected) {
+            if (m.selected || m.selectedT2) {
+                let flags = [];
+                if (m.selected) flags.push('T1');
+                if (m.selectedT2) flags.push('T2');
+                const flagStr = flags.join('&');
+
                 if (m.isGuest) {
-                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}`);
+                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}_${flagStr}`);
                 } else {
-                    encodedMembers.push(m.code);
+                    encodedMembers.push(`${m.code}_${flagStr}`);
                 }
             }
         });
@@ -596,6 +695,7 @@
             date: partyData.date,
             loc: partyData.location,
             bill: partyData.totalBill,
+            b2: partyData.tang2Bill || 0,
             note: partyData.costNote || '',
             selectedCodes: encodedMembers
         };
@@ -631,7 +731,6 @@
         }
     }
 
-    // chuẩn hóa dữ liệu từ Sheets trả về
     function normalizeItem(raw, idx) {
         return {
             id: raw.id || raw.ID || ('sheet_' + idx + '_' + Date.now()),
@@ -639,6 +738,7 @@
             date: raw.date || raw.Date || raw.partyDate || '',
             loc: raw.loc || raw.location || raw.Location || raw.Nơi || 'N/A',
             bill: raw.bill || raw.totalBill || raw['Total Bill'] || raw.Bill || 0,
+            b2: raw.b2 || raw.tang2Bill || 0,
             note: raw.note || raw.costNote || raw.Note || '',
             selectedCodes: raw.selectedCodes || raw.members || raw.Members || []
         };
@@ -653,7 +753,6 @@
                 window.cachedHistoryData = normalized;
                 localStorage.setItem('party_history', JSON.stringify(normalized));
                 
-                // Nếu modal đang mở thì tự làm mới dữ liệu chuẩn
                 const modal = document.getElementById('historyModal');
                 if (modal && modal.style.display === 'flex') {
                     renderHistoryList(normalized);
@@ -668,7 +767,6 @@
         const modal = document.getElementById('historyModal');
         if (modal) modal.style.display = 'flex';
 
-        // Lấy từ LocalStorage để hiện lập tức không chờ đợi
         let localHist = JSON.parse(localStorage.getItem('party_history') || '[]');
         let dataToRender = (window.cachedHistoryData && window.cachedHistoryData.length > 0) ? window.cachedHistoryData : localHist;
         
@@ -691,7 +789,7 @@
         container.innerHTML = '';
         list.forEach((item, index) => {
             const normalized = normalizeItem(item, index);
-            const billNum = parseFloat(normalized.bill) || 0;
+            const billNum = (parseFloat(normalized.bill) || 0) + (parseFloat(normalized.b2) || 0);
             const billFormatted = billNum > 0 ? billNum.toLocaleString('vi-VN') + 'đ' : '0đ';
             const safeId = String(normalized.id).replace(/'/g, "\\'");
 
@@ -718,21 +816,20 @@
         
         const rawItem = history.find(h => String(h.id) === String(itemId));
         if (!rawItem) {
-            alert("Dữ liệu bữa nhậu chưa sẵn sàng hoặc không tồn tại, vui lòng bấm thử lại!");
+            alert("Không tìm thấy dữ liệu bữa nhậu này!");
             return;
         }
 
         const item = normalizeItem(rawItem, 0);
 
-        // 1. Điền dữ liệu vào Form
         document.getElementById('partyName').value = item.name || '';
         document.getElementById('partyDate').value = item.date || '';
         document.getElementById('partyLocation').value = (item.loc !== 'N/A') ? item.loc : '';
         document.getElementById('totalBill').value = item.bill || 0;
+        document.getElementById('tang2Bill').value = item.b2 || 0;
         document.getElementById('costNote').value = item.note || '';
         updateNoteDisplay();
 
-        // 2. Khôi phục danh sách thành viên
         members = JSON.parse(JSON.stringify(defaultMembers));
 
         let codesToSelect = [];
@@ -745,36 +842,45 @@
         codesToSelect.forEach(codeObj => {
             let codeStr = typeof codeObj === 'object' ? (codeObj.code || codeObj.name) : String(codeObj);
             
-            if (codeStr && codeStr.startsWith('G_')) {
-                const parts = codeStr.split('_');
-                const gName = decodeURIComponent(parts[1] || 'KHÁCH');
-                const gRole = parts[2] || 'SR';
-                const gAmount = parseFloat(parts[3]) || 0;
-                members.push({
-                    code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
-                    name: gName,
-                    role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
-                    selected: true,
-                    isGuest: true,
-                    customAmount: gAmount > 0 ? gAmount : undefined
-                });
-            } else if (codeStr) {
-                const m = members.find(x => x.code === codeStr || x.name === codeStr);
-                if (m) m.selected = true;
+            if (codeStr) {
+                let parts = codeStr.split('_');
+                let mainCode = parts[0];
+                let flags = parts.length > 1 ? parts[parts.length - 1] : 'T1';
+
+                let isT1 = flags.includes('T1') || !flags.includes('T2');
+                let isT2 = flags.includes('T2');
+
+                if (mainCode === 'G') {
+                    const gName = decodeURIComponent(parts[1] || 'KHÁCH');
+                    const gRole = parts[2] || 'SR';
+                    const gAmount = parseFloat(parts[3]) || 0;
+                    members.push({
+                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
+                        name: gName,
+                        role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
+                        selected: isT1,
+                        selectedT2: isT2,
+                        isGuest: true,
+                        customAmount: gAmount > 0 ? gAmount : undefined
+                    });
+                } else {
+                    const m = members.find(x => x.code === mainCode || x.name === mainCode);
+                    if (m) {
+                        m.selected = isT1;
+                        m.selectedT2 = isT2;
+                    }
+                }
             }
         });
 
-        // 3. Đóng Popup và Tính tiền
         closeHistoryModal();
         renderMembers();
 
-        // 4. Tạo URL Parameter và Copy Link an toàn
         const shareUrl = buildCurrentShareUrl();
         window.history.pushState({}, '', shareUrl);
 
         copyTextToClipboard(shareUrl).then(res => {
             if (res) alert(`Đã tải bữa nhậu "${item.name}" thành công!\nLink bữa nhậu đã được copy vào bộ nhớ tạm để dán Zalo.`);
-            else prompt("Sao chép link dưới đây:", shareUrl);
         });
     }
 
@@ -784,6 +890,7 @@
         const date = urlParams.get('date');
         const loc = urlParams.get('loc');
         const bill = urlParams.get('bill');
+        const b2 = urlParams.get('b2');
         const note = urlParams.get('note');
         const mList = urlParams.get('m');
 
@@ -791,6 +898,7 @@
         if (date) document.getElementById('partyDate').value = decodeURIComponent(date);
         if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
         if (bill) document.getElementById('totalBill').value = bill;
+        if (b2) document.getElementById('tang2Bill').value = b2;
         if (note) {
             document.getElementById('costNote').value = decodeURIComponent(note);
             updateNoteDisplay();
@@ -798,10 +906,17 @@
 
         if (mList) {
             const codes = mList.split(',');
-            members.forEach(m => m.selected = false);
+            members.forEach(m => { m.selected = false; m.selectedT2 = false; });
+
             codes.forEach(codeStr => {
-                if (codeStr.startsWith('G_')) {
-                    const parts = codeStr.split('_');
+                let parts = codeStr.split('_');
+                let mainCode = parts[0];
+                let flags = parts.length > 1 ? parts[parts.length - 1] : 'T1';
+
+                let isT1 = flags.includes('T1') || !flags.includes('T2');
+                let isT2 = flags.includes('T2');
+
+                if (mainCode === 'G') {
                     const gName = decodeURIComponent(parts[1]);
                     const gRole = parts[2];
                     const gAmount = parseFloat(parts[3]) || 0;
@@ -809,13 +924,17 @@
                         code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
                         name: gName,
                         role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
-                        selected: true,
+                        selected: isT1,
+                        selectedT2: isT2,
                         isGuest: true,
                         customAmount: gAmount > 0 ? gAmount : undefined
                     });
                 } else {
-                    const m = members.find(x => x.code === codeStr);
-                    if (m) m.selected = true;
+                    const m = members.find(x => x.code === mainCode);
+                    if (m) {
+                        m.selected = isT1;
+                        m.selectedT2 = isT2;
+                    }
                 }
             });
         }
