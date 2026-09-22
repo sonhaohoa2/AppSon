@@ -125,11 +125,11 @@
             </div>
             <div class="info-row">
                 <label>💰 Bill Tăng 1 (VNĐ):</label>
-                <input type="number" id="totalBill" placeholder="0" class="admin-edit" onchange="calculateMoney()">
+                <input type="number" id="totalBill" placeholder="0" class="admin-edit" onchange="onAdminInputChange()">
             </div>
             <div class="info-row" id="tang2Row" style="display:none; background:#fff7ed; padding:4px 6px; border-radius:6px; border:1px solid #ffedd5;">
                 <label style="color:#c2410c;">🔥 Bill Tăng 2 (VNĐ):</label>
-                <input type="number" id="tang2Bill" placeholder="0" class="admin-edit" onchange="calculateMoney()" style="border-color:#fdba74;">
+                <input type="number" id="tang2Bill" placeholder="0" class="admin-edit" onchange="onAdminInputChange()" style="border-color:#fdba74;">
             </div>
             
             <div class="info-row" id="noteInputRow" style="display:none; margin-top:6px;">
@@ -154,8 +154,8 @@
             <div class="info-row" style="margin-top: 4px;"><label>STK nhận tiền:</label><input type="text" id="bankAcc" value="0961000022699" onchange="calculateMoney()"></div>
             <div class="info-row" style="margin-top: 4px;"><label>Chủ tài khoản:</label><input type="text" id="bankUser" value="HOANG VAN SON" onchange="calculateMoney()"></div>
             <hr style="margin: 8px 0; border: 0; border-top: 1px dashed #cbd5e1;">
-            <div class="info-row"><label>Mức chi ASM (Công Nhận):</label><input type="number" id="fixAsm" placeholder="Nhập số tiền..." onchange="calculateMoney()"></div>
-            <div class="info-row" style="margin-top: 4px;"><label>Mức chi SS (Mỗi người):</label><input type="number" id="fixSs" placeholder="Nhập số tiền..." onchange="calculateMoney()"></div>
+            <div class="info-row"><label>Mức chi ASM (Công Nhận):</label><input type="number" id="fixAsm" placeholder="Nhập số tiền..." onchange="onAdminInputChange()"></div>
+            <div class="info-row" style="margin-top: 4px;"><label>Mức chi SS (Mỗi người):</label><input type="number" id="fixSs" placeholder="Nhập số tiền..." onchange="onAdminInputChange()"></div>
         </div>
 
         <div class="add-guest-box" id="addGuestBox">
@@ -180,7 +180,7 @@
 
         <div id="memberList"></div>
 
-        <button class="btn-act btn-calc" id="btnCalc" onclick="calculateMoney()" style="display:none; margin-top: 12px;">TÍNH TIỀN & CẬP NHẬT</button>
+        <button class="btn-act btn-calc" id="btnCalc" onclick="onAdminInputChange()" style="display:none; margin-top: 12px;">TÍNH TIỀN & CẬP NHẬT</button>
 
         <div class="feedback-box">
             <div style="font-size: 12px; font-weight: 800; color: #873800; text-align: center;">⭐ ĐÁNH GIÁ & ĐÓNG GÓP Ý KIẾN</div>
@@ -285,8 +285,8 @@
     let currentRole = 'user';
     let currentRating = 5;
     let currentPayInfo = { name: '', amount: 0, qrUrl: '' };
-    let isHistoryMode = false; 
-    window.cachedHistoryData = JSON.parse(localStorage.getItem('party_history') || '[]');
+    let isHistoryMode = false;
+    window.rawSheetData = []; 
 
     function cleanDateFormat(dateStr) {
         if (!dateStr) return 'N/A';
@@ -323,6 +323,11 @@
         const roleSel = document.getElementById('newGuestRole').value;
         const customInp = document.getElementById('newGuestCustomAmount');
         customInp.style.display = (roleSel === 'CUSTOM') ? 'block' : 'none';
+    }
+
+    function onAdminInputChange() {
+        isHistoryMode = false;
+        calculateMoney();
     }
 
     function renderMembers() {
@@ -362,10 +367,10 @@
             container.innerHTML += html;
         });
 
-        if (!isHistoryMode) {
-            calculateMoney();
-        } else {
+        if (isHistoryMode) {
             updateDisplayFromHistoryData();
+        } else {
+            calculateMoney();
         }
     }
 
@@ -776,55 +781,47 @@
         }).catch(err => alert('Lỗi khi lưu: ' + err));
     }
 
-    function normalizeItem(raw, idx) {
-        return {
-            id: raw.id || ('sheet_' + idx),
-            name: raw.name || raw['Tên bữa nhậu'] || 'Bữa nhậu',
-            date: cleanDateFormat(raw.date || raw['Ngày nhậu'] || ''),
-            loc: raw.loc || raw['Địa điểm'] || 'N/A',
-            bill: raw.bill || raw['Tổng bill'] || 0,
-            note: raw.note || raw['Ghi chú Bill'] || '',
-            membersList: raw.membersList || raw['Tên người/NV'] || raw['Tên người'] || '',
-            selectedCodes: raw.selectedCodes || raw.shareUrl || ''
-        };
-    }
-
     async function fetchHistoryBackground() {
         try {
-            const response = await fetch(`${SCRIPT_URL}?action=getHistoryDetails`);
+            const response = await fetch(`${SCRIPT_URL}?action=getHistory`);
             const data = await response.json();
             if (data && Array.isArray(data)) {
-                window.cachedSheetRows = data; 
-                
-                let summaryList = [];
-                data.forEach((row, idx) => {
-                    let pName = row['Tên bữa nhậu'] || row.partyName;
+                window.rawSheetData = data; 
+                let partyGroupMap = {};
+
+                data.forEach(row => {
+                    let type = row['Loại'] || row.type || '';
+                    if (type && type !== 'HÓA ĐƠN' && type !== 'PARTY_SAVE') return;
+
+                    let pName = row['Tên bữa nhậu'] || row.partyName || row.name;
                     let pDate = cleanDateFormat(row['Ngày nhậu'] || row.date);
                     if (!pName) return;
 
-                    let existing = summaryList.find(x => x.name === pName && x.date === pDate);
-                    if (!existing) {
-                        summaryList.push({
-                            id: 'party_' + idx,
+                    let key = `${pName}_${pDate}`;
+                    if (!partyGroupMap[key]) {
+                        partyGroupMap[key] = {
+                            id: key,
                             name: pName,
                             date: pDate,
                             loc: row['Địa điểm'] || row.location || 'N/A',
-                            bill: row['Tổng bill'] || row.totalBill || 0,
-                            note: row['Ghi chú Bill'] || row.costNote || ''
-                        });
+                            bill: parseFloat(row['Tổng bill'] || row.totalBill) || 0,
+                            note: row['Ghi chú Bill'] || row.costNote || '',
+                            rows: []
+                        };
                     }
+                    partyGroupMap[key].rows.push(row);
                 });
 
-                window.cachedHistoryData = summaryList;
-                localStorage.setItem('party_history', JSON.stringify(summaryList));
-                
+                let summaryList = Object.values(partyGroupMap);
+                localStorage.setItem('party_history_list', JSON.stringify(summaryList));
+
                 const modal = document.getElementById('historyModal');
                 if (modal && modal.style.display === 'flex') {
                     renderHistoryList(summaryList);
                 }
             }
         } catch (err) {
-            console.log("Tải ngầm chi tiết lịch sử từ Sheet:", err);
+            console.log("Tải ngầm lịch sử từ Sheet:", err);
         }
     }
 
@@ -832,12 +829,8 @@
         const modal = document.getElementById('historyModal');
         if (modal) modal.style.display = 'flex';
 
-        if (window.cachedHistoryData && window.cachedHistoryData.length > 0) {
-            renderHistoryList(window.cachedHistoryData);
-        } else {
-            const localHist = JSON.parse(localStorage.getItem('party_history') || '[]');
-            renderHistoryList(localHist);
-        }
+        const savedLocal = JSON.parse(localStorage.getItem('party_history_list') || '[]');
+        renderHistoryList(savedLocal);
         fetchHistoryBackground();
     }
 
@@ -854,68 +847,65 @@
         }
 
         container.innerHTML = '';
-        list.forEach((item, index) => {
-            const normalized = normalizeItem(item, index);
-            const billNum = parseFloat(normalized.bill) || 0;
+        list.forEach((item) => {
+            const billNum = parseFloat(item.bill) || 0;
             const billFormatted = billNum > 0 ? billNum.toLocaleString('vi-VN') + 'đ' : '0đ';
+            const safeKey = encodeURIComponent(item.id);
 
             const html = `
                 <div class="history-item">
                     <div class="history-header-row">
-                        <div class="history-title">🎉 ${normalized.name}</div>
+                        <div class="history-title">🎉 ${item.name}</div>
                     </div>
-                    <div class="history-info">📅 Ngày: ${normalized.date} | 📍 Nơi: ${normalized.loc}</div>
+                    <div class="history-info">📅 Ngày: ${item.date} | 📍 Nơi: ${item.loc}</div>
                     <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
-                    ${normalized.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${normalized.note}</div>` : ''}
-                    <button class="btn-copy-item" onclick="loadHistoryToAppDirect('${encodeURIComponent(normalized.name)}', '${normalized.date}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
+                    ${item.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${item.note}</div>` : ''}
+                    <button class="btn-copy-item" onclick="loadPartyFromSheet('${safeKey}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
                 </div>
             `;
             container.innerHTML += html;
         });
     }
 
-    function loadHistoryToAppDirect(encodedPartyName, partyDate) {
-        const pName = decodeURIComponent(encodedPartyName);
-        const rows = window.cachedSheetRows || [];
-        
-        const matchedRows = rows.filter(r => {
-            let rName = r['Tên bữa nhậu'] || r.partyName;
-            let rDate = cleanDateFormat(r['Ngày nhậu'] || r.date);
-            return rName === pName && rDate === partyDate;
-        });
+    function loadPartyFromSheet(encodedKey) {
+        const key = decodeURIComponent(encodedKey);
+        const savedList = JSON.parse(localStorage.getItem('party_history_list') || '[]');
+        const targetParty = savedList.find(p => p.id === key);
 
-        if (matchedRows.length === 0) {
-            alert("Không tìm thấy dữ liệu chi tiết của bữa nhậu này trên Sheet!");
+        if (!targetParty) {
+            alert("Không tìm thấy thông tin chi tiết bữa nhậu này!");
             return;
         }
 
         isHistoryMode = true; 
 
-        const firstRow = matchedRows[0];
-        document.getElementById('partyName').value = pName;
-        document.getElementById('partyDate').value = partyDate;
-        document.getElementById('partyLocation').value = firstRow['Địa điểm'] || firstRow.location || '';
-        document.getElementById('totalBill').value = firstRow['Tổng bill'] || firstRow.totalBill || 0;
-        document.getElementById('costNote').value = firstRow['Ghi chú Bill'] || firstRow.costNote || '';
+        document.getElementById('partyName').value = targetParty.name;
+        document.getElementById('partyDate').value = targetParty.date;
+        document.getElementById('partyLocation').value = targetParty.loc;
+        document.getElementById('totalBill').value = targetParty.bill;
+        document.getElementById('costNote').value = targetParty.note;
         updateNoteDisplay();
 
         members = JSON.parse(JSON.stringify(defaultMembers));
         members.forEach(m => {
             m.selected = false;
             m.selectedT2 = false;
+            m.historyAmount = 0;
         });
 
-        matchedRows.forEach(r => {
+        targetParty.rows.forEach(r => {
             let personName = String(r['Tên người/NV'] || r['Tên người'] || r.name || '').trim().toUpperCase();
             let amt = parseFloat(r['Số tiền'] || r.amount) || 0;
             let roleStr = r['Chức danh'] || r.role || '';
+
+            if (!personName || personName === 'TỔNG BỮA') return;
 
             let matchedMember = members.find(m => m.name.toUpperCase() === personName);
 
             if (matchedMember) {
                 matchedMember.selected = true;
                 matchedMember.historyAmount = amt;
-            } else if (personName && personName !== 'TỔNG BỮA') {
+            } else {
                 members.push({
                     code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
                     name: personName,
