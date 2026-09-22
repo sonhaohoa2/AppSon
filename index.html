@@ -228,7 +228,7 @@
 <div id="qrModal" class="modal-overlay">
     <div class="modal-content" style="text-align: center;">
         <div class="modal-header">
-            <h3>📲 MÃ QUÉT CHUYỂN KHỎAN</h3>
+            <h3>📲 MÃ QUÉT CHUYỂN KHOẢN</h3>
             <button class="btn-close" onclick="closeQrModal()">✕ Đóng</button>
         </div>
         <div id="qrModalBody">
@@ -236,7 +236,7 @@
             <p style="font-size:18px; font-weight:800; color:#c8102e; margin:2px 0;" id="qrAmountDisplay"></p>
             <img id="qrImageDisplay" src="" class="qr-popup-img" alt="Mã QR Chuyển Khoản">
             
-            <button type="button" class="btn-act btn-share" style="width:100%; margin:8px 0;" onclick="copyQrInfo(true)">📋 Copy Số TK & Số Tiền</button>
+            <button type="button" class="btn-act btn-share" style="width:100%; margin:8px 0; background-color: #002d72;" onclick="downloadQrImage()">📥 Lưu Mã QR Về Máy</button>
 
             <p style="font-size:11px; font-weight:700; color:#002d72; margin-top:8px;">MỞ NHANH APP NGÂN HÀNG TRÊN DI ĐỘNG:</p>
             <div class="bank-grid">
@@ -410,6 +410,27 @@
         });
     }
 
+    function downloadQrImage() {
+        if (!currentPayInfo.qrUrl) return;
+
+        fetch(currentPayInfo.qrUrl)
+            .then(response => response.blob())
+            .then(blob => {
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = `VietQR_${currentPayInfo.name.replace(/\s+/g, '_')}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+                alert("Đã lưu mã QR về thiết bị!\nBạn có thể vào App Ngân Hàng chọn 'Quét QR từ Thư viện ảnh' để chuyển khoản cực nhanh.");
+            })
+            .catch(() => {
+                window.open(currentPayInfo.qrUrl, '_blank');
+            });
+    }
+
     function openUniversalBankApp(appCode) {
         const bankName = document.getElementById('bankName').value.toLowerCase();
         const bankAcc = document.getElementById('bankAcc').value;
@@ -418,9 +439,7 @@
         
         copyQrInfo(false);
 
-        // Universal Deeplink chuẩn của VietQR/Napas
         const deeplinkUrl = `https://dl.vietqr.io/pay?app=${appCode}&ba=${bankAcc}@${bankName}&am=${currentPayInfo.amount}&tn=${memo}&bn=${bankUser}`;
-        
         window.location.href = deeplinkUrl;
     }
 
