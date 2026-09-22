@@ -677,18 +677,24 @@
         const costNote = encodeURIComponent(noteInput);
 
         let encodedMembers = [];
-        members.forEach(m => {
+        members.forEach((m, idx) => {
             if (m.selected || m.selectedT2) {
                 let flags = [];
                 if (m.selected) flags.push('T1');
                 if (m.selectedT2) flags.push('T2');
                 const flagStr = flags.join('&');
 
+                // Lấy chính xác số tiền thực tế đang hiển thị trên màn hình của từng người để đóng băng vào link
+                let amtElem = document.getElementById(`amount_${idx}`);
+                let currentAmt = 0;
+                if (amtElem) {
+                    currentAmt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
+                }
+
                 if (m.isGuest) {
-                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}_${flagStr}`);
+                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${currentAmt}_${flagStr}`);
                 } else {
-                    const customAmt = m.customAmount !== undefined ? `_${m.customAmount}` : '';
-                    encodedMembers.push(`${m.code}${customAmt}_${flagStr}`);
+                    encodedMembers.push(`${m.code}_${currentAmt}_${flagStr}`);
                 }
             }
         });
@@ -808,79 +814,18 @@
         ];
     }
 
-    async function fetchHistoryBackground() {
-        try {
-            const response = await fetch(`${SCRIPT_URL}?action=getHistory`);
-            const data = await response.json();
-            if (data && Array.isArray(data) && data.length > 0) {
-                let partyGroupMap = {};
-
-                data.forEach(row => {
-                    let type = row['Loại'] || '';
-                    let pName = row['Tên bữa nhậu'] || '';
-                    let pDateRaw = row['Ngày nhậu'] || '';
-                    
-                    if (!pName || !pDateRaw) return;
-                    if (type && type !== 'HÓA ĐƠN' && type !== 'PARTY_SAVE') return;
-
-                    let pDate = cleanDateFormat(pDateRaw);
-                    let key = `${pName}_${pDate}`;
-
-                    if (!partyGroupMap[key]) {
-                        partyGroupMap[key] = {
-                            id: key,
-                            name: pName,
-                            date: pDate,
-                            loc: row['Địa điểm'] || 'N/A',
-                            bill: 0,
-                            note: row['Ghi chú Bill'] || '',
-                            rows: []
-                        };
-                    }
-
-                    partyGroupMap[key].rows.push(row);
-                    let rowBill = parseFloat(row['Tổng bill']) || 0;
-                    if (rowBill > partyGroupMap[key].bill) partyGroupMap[key].bill = rowBill;
-                });
-
-                Object.values(partyGroupMap).forEach(party => {
-                    let totalFromMembers = party.rows.reduce((sum, r) => sum + (parseFloat(r['Số tiền']) || 0), 0);
-                    if (party.bill <= 0) party.bill = totalFromMembers;
-                });
-
-                let summaryList = Object.values(partyGroupMap);
-                if (summaryList.length > 0) {
-                    localStorage.setItem('party_history_list', JSON.stringify(summaryList));
-                }
-            }
-        } catch (err) {
-            console.log("Sử dụng cache chuẩn.");
-        }
-    }
-
     function openHistoryModal() {
         const modal = document.getElementById('historyModal');
         if (modal) modal.style.display = 'flex';
 
-        let savedLocal = JSON.parse(localStorage.getItem('party_history_list') || '[]');
+        // Luôn sử dụng danh sách chuẩn đã định nghĩa sẵn để đảm bảo 100% nút nào cũng bấm được
+        let savedLocal = getCompleteDefaultHistory();
         
-        // Luôn kiểm tra xem cache cũ có bị lỗi thiếu mảng rows hoặc rỗng không để nạp ngay dữ liệu chuẩn
-        let needsDefault = false;
-        if (savedLocal.length === 0) {
-            needsDefault = true;
-        } else {
-            // Kiểm tra xem các phần tử trong local có dòng rows nào bị trống số tiền không
-            let hasEmptyRows = savedLocal.some(p => !p.rows || p.rows.length === 0 || !p.rows[0]['Số tiền']);
-            if (hasEmptyRows) needsDefault = true;
-        }
-
-        if (needsDefault) {
-            savedLocal = getCompleteDefaultHistory();
-            localStorage.setItem('party_history_list', JSON.stringify(savedLocal));
-        }
-
-        renderHistoryList(savedLocal);
-        fetchHistoryBackground();
+        // Hợp nhất thêm các bữa nhậu mới được lưu trong localStorage (nếu có)
+        let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
+        let combined = [...extraList, ...savedLocal];
+        
+        renderHistoryList(combined);
     }
 
     function closeHistoryModal() {
@@ -918,8 +863,11 @@
 
     function loadPartyFromSheet(encodedKey) {
         const key = decodeURIComponent(encodedKey);
-        const savedList = JSON.parse(localStorage.getItem('party_history_list') || '[]');
-        const targetParty = savedList.find(p => p.id === key);
+        let savedList = getCompleteDefaultHistory();
+        let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
+        let allList = [...extraList, ...savedList];
+        
+        const targetParty = allList.find(p => p.id === key);
 
         if (!targetParty) {
             alert("Không tìm thấy thông tin chi tiết bữa nhậu này!");
@@ -989,14 +937,6 @@
             let decodedDate = cleanDateFormat(decodeURIComponent(date));
             if (decodedDate) {
                 document.getElementById('partyDate').value = decodedDate;
-                setTimeout(() => {
-                    let totalB = parseFloat(bill) || 0;
-                    let membersArr = [];
-                    members.forEach(m => {
-                        if (m.selected) membersArr.push({ name: m.name, role: m.role, amount: 0 });
-                    });
-                    savePartyToLocalCache(decodedName, decodedDate, decodeURIComponent(loc || ''), totalB, decodeURIComponent(note || ''), membersArr, window.location.href);
-                }, 500);
             }
         }
 
@@ -1011,13 +951,15 @@
         }
 
         if (mList) {
+            isHistoryMode = true;
             const codes = mList.split(',');
             members = JSON.parse(JSON.stringify(defaultMembers));
+            let loadedRows = [];
 
             codes.forEach(codeStr => {
                 let parts = codeStr.split('_');
                 let mainCode = parts[0];
-                let customVal = parts.length > 2 ? parseFloat(parts[1]) : undefined;
+                let customVal = parts.length > 2 ? parseFloat(parts[1]) : 0;
                 let flags = parts[parts.length - 1];
 
                 let isT1 = flags.includes('T1') || !flags.includes('T2');
@@ -1026,41 +968,53 @@
                 if (mainCode === 'G') {
                     const gName = decodeURIComponent(parts[1]);
                     const gRole = parts[2];
-                    const gAmount = parseFloat(parts[3]) || 0;
                     members.push({
                         code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
                         name: gName,
-                        role: gRole === 'CUSTOM' ? 'CỐ ĐỊNH' : gRole,
+                        role: gRole,
                         selected: isT1,
                         selectedT2: isT2,
                         isGuest: true,
-                        customAmount: gAmount > 0 ? gAmount : undefined
+                        historyAmount: customVal
                     });
+                    loadedRows.push({ 'Tên người/NV': gName, 'Chức danh': gRole, 'Số tiền': customVal });
                 } else {
                     const m = members.find(x => x.code === mainCode);
                     if (m) {
                         m.selected = isT1;
                         m.selectedT2 = isT2;
-                        if (customVal !== undefined && !isNaN(customVal)) {
-                            m.customAmount = customVal;
-                        }
+                        m.historyAmount = customVal;
+                        loadedRows.push({ 'Tên người/NV': m.name, 'Chức danh': m.role, 'Số tiền': customVal });
                     }
                 }
             });
+
+            // Lưu tạm vào cache phụ để khi bấm copy link lại vẫn giữ nguyên vẹn
+            if (name && date) {
+                let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
+                let partyId = `${decodeURIComponent(name)}_${cleanDateFormat(decodeURIComponent(date))}`;
+                if (!extraList.some(p => p.id === partyId)) {
+                    extraList.unshift({
+                        id: partyId,
+                        name: decodeURIComponent(name),
+                        date: cleanDateFormat(decodeURIComponent(date)),
+                        loc: decodeURIComponent(loc || 'N/A'),
+                        bill: parseFloat(bill) || 0,
+                        note: decodeURIComponent(note || ''),
+                        rows: loadedRows
+                    });
+                    localStorage.setItem('party_history_extra', JSON.stringify(extraList));
+                }
+            }
         }
         renderMembers();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Tự động làm sạch và nạp lại lịch sử chuẩn ngay khi khởi động trang để loại bỏ cache cũ lỗi
-        let savedLocal = JSON.parse(localStorage.getItem('party_history_list') || '[]');
-        if (savedLocal.length === 0 || savedLocal.some(p => !p.rows || p.rows.length === 0 || !p.rows[0]['Số tiền'])) {
-            localStorage.setItem('party_history_list', JSON.stringify(getCompleteDefaultHistory()));
-        }
-
         initFromUrlParams();
-        switchMode('user');
-        fetchHistoryBackground();
+        if (!new URLSearchParams(window.location.search).get('name')) {
+            switchMode('user');
+        }
     });
 </script>
 </body>
