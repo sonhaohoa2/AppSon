@@ -618,23 +618,22 @@
         const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected'))
             .map(t => t.innerText).join(', ');
 
-        const payload = {
-            type: 'FEEDBACK',
-            date: document.getElementById('partyDate').value,
-            partyName: document.getElementById('partyName').value,
-            location: document.getElementById('partyLocation').value,
-            reviewer: name,
-            stars: currentRating + ' sao',
-            tags: selectedTags,
-            comment: comment
-        };
+        const formData = new URLSearchParams();
+        formData.append('type', 'FEEDBACK');
+        formData.append('date', document.getElementById('partyDate').value);
+        formData.append('partyName', document.getElementById('partyName').value);
+        formData.append('location', document.getElementById('partyLocation').value);
+        formData.append('reviewer', name);
+        formData.append('stars', currentRating + ' sao');
+        formData.append('tags', selectedTags);
+        formData.append('comment', comment);
 
         alert('Đang gửi đánh giá lên Google Sheets...');
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
         }).then(() => {
             alert(`Cảm ơn ${name} đã gửi ý kiến!`);
             document.getElementById('feedbackComment').value = '';
@@ -706,22 +705,18 @@
             return `${m.name} (${m.role}): ${amountText}`;
         }).join('\n');
 
-        const payload = {
-            type: 'PARTY_SAVE',
-            action: 'saveParty',
-            date: partyDate,
-            partyDate: partyDate,
-            partyName: partyName,
-            name: partyName,
-            location: location,
-            loc: location,
-            totalBill: totalBill + tang2Bill,
-            bill: totalBill + tang2Bill,
-            costNote: costNote,
-            note: costNote,
-            members: selectedList,
-            selectedCodes: buildCurrentShareUrl()
-        };
+        const shareUrl = buildCurrentShareUrl();
+
+        const formData = new URLSearchParams();
+        formData.append('type', 'PARTY_SAVE');
+        formData.append('action', 'saveParty');
+        formData.append('date', partyDate);
+        formData.append('partyName', partyName);
+        formData.append('location', location);
+        formData.append('totalBill', totalBill + tang2Bill);
+        formData.append('costNote', costNote);
+        formData.append('members', selectedList);
+        formData.append('selectedCodes', shareUrl);
 
         saveToLocalHistory({ partyName, date: partyDate, location, totalBill, tang2Bill, costNote });
 
@@ -729,34 +724,19 @@
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
         }).then(() => {
             alert('Đã lưu thành công lên Google Sheets!');
-            fetchHistoryBackground();
+            setTimeout(() => {
+                fetchHistoryBackground();
+            }, 1000);
         }).catch(err => alert('Lỗi khi lưu: ' + err));
     }
 
     function saveToLocalHistory(partyData) {
         let history = JSON.parse(localStorage.getItem('party_history') || '[]');
         
-        let encodedMembers = [];
-        members.forEach(m => {
-            if (m.selected || m.selectedT2) {
-                let flags = [];
-                if (m.selected) flags.push('T1');
-                if (m.selectedT2) flags.push('T2');
-                const flagStr = flags.join('&');
-
-                if (m.isGuest) {
-                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}_${flagStr}`);
-                } else {
-                    const customAmt = m.customAmount !== undefined ? `_${m.customAmount}` : '';
-                    encodedMembers.push(`${m.code}${customAmt}_${flagStr}`);
-                }
-            }
-        });
-
         const historyObj = {
             id: 'item_' + Date.now(),
             name: partyData.partyName,
@@ -765,7 +745,7 @@
             bill: partyData.totalBill,
             b2: partyData.tang2Bill || 0,
             note: partyData.costNote || '',
-            selectedCodes: encodedMembers
+            selectedCodes: buildCurrentShareUrl()
         };
 
         const existingIdx = history.findIndex(item => item.name === partyData.partyName && item.date === partyData.date);
@@ -808,7 +788,7 @@
             bill: raw.bill || raw.totalBill || raw['Total Bill'] || raw.Bill || 0,
             b2: raw.b2 || raw.tang2Bill || 0,
             note: raw.note || raw.costNote || raw.Note || '',
-            selectedCodes: raw.selectedCodes || raw.members || raw.Members || []
+            selectedCodes: raw.selectedCodes || raw.url || raw.Link || raw.members || []
         };
     }
 
@@ -889,6 +869,11 @@
         }
 
         const item = normalizeItem(rawItem, 0);
+
+        if (typeof item.selectedCodes === 'string' && item.selectedCodes.includes('http')) {
+            window.location.href = item.selectedCodes;
+            return;
+        }
 
         document.getElementById('partyName').value = item.name || '';
         document.getElementById('partyDate').value = item.date || '';
