@@ -154,8 +154,8 @@
             <div class="info-row" style="margin-top: 4px;"><label>STK nhận tiền:</label><input type="text" id="bankAcc" value="0961000022699" onchange="calculateMoney()"></div>
             <div class="info-row" style="margin-top: 4px;"><label>Chủ tài khoản:</label><input type="text" id="bankUser" value="HOANG VAN SON" onchange="calculateMoney()"></div>
             <hr style="margin: 8px 0; border: 0; border-top: 1px dashed #cbd5e1;">
-            <div class="info-row"><label>Mức chi ASM (Công Nhận):</label><input type="number" id="fixAsm" value="600000" onchange="calculateMoney()"></div>
-            <div class="info-row" style="margin-top: 4px;"><label>Mức chi SS (Mỗi người):</label><input type="number" id="fixSs" value="400000" onchange="calculateMoney()"></div>
+            <div class="info-row"><label>Mức chi ASM (Công Nhận):</label><input type="number" id="fixAsm" placeholder="Nhập số tiền..." onchange="calculateMoney()"></div>
+            <div class="info-row" style="margin-top: 4px;"><label>Mức chi SS (Mỗi người):</label><input type="number" id="fixSs" placeholder="Nhập số tiền..." onchange="calculateMoney()"></div>
         </div>
 
         <div class="add-guest-box" id="addGuestBox">
@@ -286,6 +286,18 @@
     let currentRating = 5;
     let currentPayInfo = { name: '', amount: 0, qrUrl: '' };
     window.cachedHistoryData = JSON.parse(localStorage.getItem('party_history') || '[]');
+
+    function cleanDateFormat(dateStr) {
+        if (!dateStr) return 'N/A';
+        let str = String(dateStr).trim();
+        if (str.includes('T')) {
+            str = str.split('T')[0];
+        }
+        if (str.includes(' ')) {
+            str = str.split(' ')[0];
+        }
+        return str;
+    }
 
     function copyTextToClipboard(text) {
         if (navigator.clipboard && window.isSecureContext) {
@@ -645,8 +657,8 @@
         const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
         const totalBill = document.getElementById('totalBill').value || '0';
         const tang2Bill = document.getElementById('tang2Bill').value || '0';
-        const fixAsm = document.getElementById('fixAsm').value || '600000';
-        const fixSs = document.getElementById('fixSs').value || '400000';
+        const fixAsm = document.getElementById('fixAsm').value || '';
+        const fixSs = document.getElementById('fixSs').value || '';
         
         let noteInput = document.getElementById('costNote').value.trim();
         if (!noteInput) {
@@ -739,7 +751,7 @@
         return {
             id: raw.id || ('sheet_' + idx),
             name: raw.name || raw['Tên bữa nhậu'] || 'Bữa nhậu',
-            date: raw.date || raw['Ngày nhậu'] || '',
+            date: cleanDateFormat(raw.date || raw['Ngày nhậu'] || ''),
             loc: raw.loc || raw['Địa điểm'] || 'N/A',
             bill: raw.bill || raw['Tổng bill'] || 0,
             note: raw.note || raw['Ghi chú Bill'] || '',
@@ -803,7 +815,7 @@
                     <div class="history-header-row">
                         <div class="history-title">🎉 ${normalized.name}</div>
                     </div>
-                    <div class="history-info">📅 Ngày: ${normalized.date || 'N/A'} | 📍 Nơi: ${normalized.loc || 'N/A'}</div>
+                    <div class="history-info">📅 Ngày: ${normalized.date} | 📍 Nơi: ${normalized.loc}</div>
                     <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
                     ${normalized.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${normalized.note}</div>` : ''}
                     <button class="btn-copy-item" onclick="loadHistoryToApp('${safeId}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
@@ -823,15 +835,21 @@
 
         const item = normalizeItem(rawItem, 0);
 
-        if (item.selectedCodes && item.selectedCodes.includes('http')) {
-            const targetUrl = new URL(item.selectedCodes);
-            window.history.pushState({}, '', targetUrl.href);
-            initFromUrlParams();
-            closeHistoryModal();
-            alert(`Đã khôi phục thành công bữa nhậu "${item.name}"!`);
-        } else {
-            alert("Bữa nhậu này chưa có đường dẫn cấu hình đầy đủ trên Google Sheets!");
+        let targetUrlStr = item.selectedCodes;
+        if (!targetUrlStr || !targetUrlStr.includes('http')) {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const pName = encodeURIComponent(item.name || '');
+            const pDate = encodeURIComponent(item.date || '');
+            const pLoc = encodeURIComponent(item.loc || '');
+            const pBill = item.bill || '0';
+            const pNote = encodeURIComponent(item.note || '');
+            targetUrlStr = `${baseUrl}?name=${pName}&date=${pDate}&loc=${pLoc}&bill=${pBill}&note=${pNote}`;
         }
+
+        const targetUrl = new URL(targetUrlStr);
+        window.history.pushState({}, '', targetUrl.href);
+        initFromUrlParams();
+        closeHistoryModal();
     }
 
     function initFromUrlParams() {
@@ -847,12 +865,12 @@
         const mList = urlParams.get('m');
 
         if (name) document.getElementById('partyName').value = decodeURIComponent(name);
-        if (date) document.getElementById('partyDate').value = decodeURIComponent(date);
+        if (date) document.getElementById('partyDate').value = cleanDateFormat(decodeURIComponent(date));
         if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
         if (bill) document.getElementById('totalBill').value = bill;
         if (b2) document.getElementById('tang2Bill').value = b2;
-        if (fasm) document.getElementById('fixAsm').value = fasm;
-        if (fss) document.getElementById('fixSs').value = fss;
+        if (fasm !== null) document.getElementById('fixAsm').value = fasm;
+        if (fss !== null) document.getElementById('fixSs').value = fss;
         if (note) {
             document.getElementById('costNote').value = decodeURIComponent(note);
             updateNoteDisplay();
