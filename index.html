@@ -285,6 +285,7 @@
     let currentRole = 'user';
     let currentRating = 5;
     let currentPayInfo = { name: '', amount: 0, qrUrl: '' };
+    let isHistoryMode = false; 
     window.cachedHistoryData = JSON.parse(localStorage.getItem('party_history') || '[]');
 
     function cleanDateFormat(dateStr) {
@@ -360,15 +361,44 @@
             `;
             container.innerHTML += html;
         });
-        calculateMoney();
+
+        if (!isHistoryMode) {
+            calculateMoney();
+        } else {
+            updateDisplayFromHistoryData();
+        }
+    }
+
+    function updateDisplayFromHistoryData() {
+        let selectedCount = 0;
+        members.forEach((m, idx) => {
+            const itemRow = document.getElementById(`item_${idx}`);
+            if (!itemRow) return;
+
+            const isParticipated = m.selected || m.selectedT2;
+            if (isParticipated) selectedCount++;
+
+            if (currentRole === 'user' && !isParticipated) {
+                itemRow.style.display = 'none';
+                return;
+            }
+            itemRow.style.display = 'flex';
+
+            let displayMoney = m.historyAmount !== undefined ? m.historyAmount : 0;
+            document.getElementById(`amount_${idx}`).innerText = displayMoney.toLocaleString('vi-VN') + ' đ';
+        });
+
+        document.getElementById('countParticipate').innerText = `(${selectedCount}/${members.length} ĐI NHẬU)`;
     }
 
     function toggleMember(idx) {
+        isHistoryMode = false;
         members[idx].selected = document.getElementById(`cb_${idx}`).checked;
         calculateMoney();
     }
 
     function toggleMemberT2(idx) {
+        isHistoryMode = false;
         members[idx].selectedT2 = document.getElementById(`cbT2_${idx}`).checked;
         calculateMoney();
     }
@@ -458,6 +488,7 @@
         if (!name) { alert('Vui lòng nhập tên khách!'); return; }
         if (roleSelect === 'CUSTOM' && customAmount <= 0) { alert('Vui lòng nhập số tiền hợp lệ!'); return; }
         
+        isHistoryMode = false;
         const code = 'KHÁCH' + Math.floor(100 + Math.random() * 900);
         let guestObj = { 
             code: code, 
@@ -490,12 +521,14 @@
                 m.customAmount = parseFloat(newMoney);
             }
         }
+        isHistoryMode = false;
         renderMembers();
     }
 
     function deleteGuest(idx) {
         if (confirm(`Bạn có chắc chắn muốn xóa "${members[idx].name}" khỏi danh sách?`)) {
             members.splice(idx, 1);
+            isHistoryMode = false;
             renderMembers();
         }
     }
@@ -758,20 +791,40 @@
 
     async function fetchHistoryBackground() {
         try {
-            const response = await fetch(`${SCRIPT_URL}?action=getHistory`);
+            const response = await fetch(`${SCRIPT_URL}?action=getHistoryDetails`);
             const data = await response.json();
             if (data && Array.isArray(data)) {
-                const normalized = data.map((item, index) => normalizeItem(item, index));
-                window.cachedHistoryData = normalized;
-                localStorage.setItem('party_history', JSON.stringify(normalized));
+                window.cachedSheetRows = data; 
+                
+                let summaryList = [];
+                data.forEach((row, idx) => {
+                    let pName = row['Tên bữa nhậu'] || row.partyName;
+                    let pDate = cleanDateFormat(row['Ngày nhậu'] || row.date);
+                    if (!pName) return;
+
+                    let existing = summaryList.find(x => x.name === pName && x.date === pDate);
+                    if (!existing) {
+                        summaryList.push({
+                            id: 'party_' + idx,
+                            name: pName,
+                            date: pDate,
+                            loc: row['Địa điểm'] || row.location || 'N/A',
+                            bill: row['Tổng bill'] || row.totalBill || 0,
+                            note: row['Ghi chú Bill'] || row.costNote || ''
+                        });
+                    }
+                });
+
+                window.cachedHistoryData = summaryList;
+                localStorage.setItem('party_history', JSON.stringify(summaryList));
                 
                 const modal = document.getElementById('historyModal');
                 if (modal && modal.style.display === 'flex') {
-                    renderHistoryList(normalized);
+                    renderHistoryList(summaryList);
                 }
             }
         } catch (err) {
-            console.log("Tải ngầm lịch sử:", err);
+            console.log("Tải ngầm chi tiết lịch sử từ Sheet:", err);
         }
     }
 
@@ -805,7 +858,6 @@
             const normalized = normalizeItem(item, index);
             const billNum = parseFloat(normalized.bill) || 0;
             const billFormatted = billNum > 0 ? billNum.toLocaleString('vi-VN') + 'đ' : '0đ';
-            const safeId = String(normalized.id).replace(/'/g, "\\'");
 
             const html = `
                 <div class="history-item">
@@ -815,53 +867,68 @@
                     <div class="history-info">📅 Ngày: ${normalized.date} | 📍 Nơi: ${normalized.loc}</div>
                     <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
                     ${normalized.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${normalized.note}</div>` : ''}
-                    <button class="btn-copy-item" onclick="loadHistoryToApp('${safeId}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
+                    <button class="btn-copy-item" onclick="loadHistoryToAppDirect('${encodeURIComponent(normalized.name)}', '${normalized.date}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
                 </div>
             `;
             container.innerHTML += html;
         });
     }
 
-    function loadHistoryToApp(itemId) {
-        let history = window.cachedHistoryData || JSON.parse(localStorage.getItem('party_history') || '[]');
-        const rawItem = history.find(h => String(h.id) === String(itemId));
-        if (!rawItem) {
-            alert("Không tìm thấy dữ liệu bữa nhậu này!");
+    function loadHistoryToAppDirect(encodedPartyName, partyDate) {
+        const pName = decodeURIComponent(encodedPartyName);
+        const rows = window.cachedSheetRows || [];
+        
+        const matchedRows = rows.filter(r => {
+            let rName = r['Tên bữa nhậu'] || r.partyName;
+            let rDate = cleanDateFormat(r['Ngày nhậu'] || r.date);
+            return rName === pName && rDate === partyDate;
+        });
+
+        if (matchedRows.length === 0) {
+            alert("Không tìm thấy dữ liệu chi tiết của bữa nhậu này trên Sheet!");
             return;
         }
 
-        const item = normalizeItem(rawItem, 0);
+        isHistoryMode = true; 
 
-        let targetUrlStr = item.selectedCodes;
-        
-        if (!targetUrlStr || !targetUrlStr.includes('http')) {
-            const baseUrl = window.location.origin + window.location.pathname;
-            const pName = encodeURIComponent(item.name || '');
-            const pDate = encodeURIComponent(item.date || '');
-            const pLoc = encodeURIComponent(item.loc || '');
-            const pBill = item.bill || '0';
-            const pNote = encodeURIComponent(item.note || '');
-            
-            let matchedCodes = [];
-            if (item.membersList && item.membersList !== 'TỔNG BỮA') {
-                const namesInSheet = String(item.membersList).toUpperCase();
-                defaultMembers.forEach(m => {
-                    if (namesInSheet.includes(m.name.toUpperCase())) {
-                        matchedCodes.push(`${m.code}_T1`);
-                    }
+        const firstRow = matchedRows[0];
+        document.getElementById('partyName').value = pName;
+        document.getElementById('partyDate').value = partyDate;
+        document.getElementById('partyLocation').value = firstRow['Địa điểm'] || firstRow.location || '';
+        document.getElementById('totalBill').value = firstRow['Tổng bill'] || firstRow.totalBill || 0;
+        document.getElementById('costNote').value = firstRow['Ghi chú Bill'] || firstRow.costNote || '';
+        updateNoteDisplay();
+
+        members = JSON.parse(JSON.stringify(defaultMembers));
+        members.forEach(m => {
+            m.selected = false;
+            m.selectedT2 = false;
+        });
+
+        matchedRows.forEach(r => {
+            let personName = String(r['Tên người/NV'] || r['Tên người'] || r.name || '').trim().toUpperCase();
+            let amt = parseFloat(r['Số tiền'] || r.amount) || 0;
+            let roleStr = r['Chức danh'] || r.role || '';
+
+            let matchedMember = members.find(m => m.name.toUpperCase() === personName);
+
+            if (matchedMember) {
+                matchedMember.selected = true;
+                matchedMember.historyAmount = amt;
+            } else if (personName && personName !== 'TỔNG BỮA') {
+                members.push({
+                    code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
+                    name: personName,
+                    role: roleStr || 'KHÁCH',
+                    selected: true,
+                    selectedT2: false,
+                    isGuest: true,
+                    historyAmount: amt
                 });
             }
+        });
 
-            if (matchedCodes.length === 0) {
-                defaultMembers.forEach(m => matchedCodes.push(`${m.code}_T1`));
-            }
-
-            targetUrlStr = `${baseUrl}?name=${pName}&date=${pDate}&loc=${pLoc}&bill=${pBill}&note=${pNote}&m=${matchedCodes.join(',')}`;
-        }
-
-        const targetUrl = new URL(targetUrlStr);
-        window.history.pushState({}, '', targetUrl.href);
-        initFromUrlParams();
+        renderMembers();
         closeHistoryModal();
     }
 
