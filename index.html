@@ -736,7 +736,6 @@
         fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
         .then(() => {
             alert('Đã lưu thành công!');
-            // Tự động lưu cache ngay vào bộ nhớ cục bộ để hiển thị ngay lập tức
             savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
         }).catch(err => alert('Lỗi khi lưu: ' + err));
     }
@@ -763,13 +762,52 @@
         if (existingIdx >= 0) {
             historyList[existingIdx] = partyObj;
         } else {
-            historyList.unshift(partyObj); // Đưa bữa mới nhất lên đầu
+            historyList.unshift(partyObj);
         }
         localStorage.setItem('party_history_list', JSON.stringify(historyList));
     }
 
-    // Tự động quét qua lệnh fetch getHistory, nếu Apps Script trả về thành công thì cập nhật, 
-    // nếu lỗi CORS thì App vẫn hiển thị mượt mà từ lịch sử đã lưu trên localStorage
+    function getCompleteDefaultHistory() {
+        return [
+            {
+                id: "Chốt Quý An Thuận Hưng_2026-09-18",
+                name: "Chốt Quý An Thuận Hưng",
+                date: "2026-09-18",
+                loc: "Quản Nhỏ Nguyễn Khánh",
+                bill: 4615000,
+                note: "Đã gồm: 200k bọ múa, 640k 4t ultra, 250k bánh trung thu",
+                rows: [
+                    { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 1400000 },
+                    { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                    { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                    { 'Tên người/NV': 'ĐỖ ĐÌNH BẢO', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                    { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 803750 }
+                ]
+            },
+            {
+                id: "Chốt Q3'26_2026-09-11",
+                name: "Chốt Q3'26",
+                date: "2026-09-11",
+                loc: "Nướng bò tre Đông Anh",
+                bill: 3570000,
+                note: "Đã gồm 800k 4t Ultra250 Đạt Tình",
+                rows: [
+                    { 'Tên người/NV': 'HOÀNG CÔNG NHẬN', 'Chức danh': 'ASM', 'Số tiền': 600000 },
+                    { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 400000 },
+                    { 'Tên người/NV': 'LÝ HỒNG MINH', 'Chức danh': 'SS', 'Số tiền': 400000 },
+                    { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'NGUYỄN VĂN ĐẠT', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'NGUYỄN HỮU VINH', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'NGUYỄN HÀ NAM', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'CẨN TRUNG HIẾU', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'NGUYỄN NGỌC LONG', 'Chức danh': 'SR', 'Số tiền': 271250 }
+                ]
+            }
+        ];
+    }
+
     async function fetchHistoryBackground() {
         try {
             const response = await fetch(`${SCRIPT_URL}?action=getHistory`);
@@ -789,12 +827,6 @@
                     let key = `${pName}_${pDate}`;
 
                     if (!partyGroupMap[key]) {
-                        // Kiểm tra xem hàng có chứa link Zalo ở cột Ghi chú Bill hoặc các cột khác không
-                        let foundUrl = '';
-                        Object.values(row).forEach(val => {
-                            if (typeof val === 'string' && val.includes('http')) foundUrl = val;
-                        });
-
                         partyGroupMap[key] = {
                             id: key,
                             name: pName,
@@ -802,7 +834,6 @@
                             loc: row['Địa điểm'] || 'N/A',
                             bill: 0,
                             note: row['Ghi chú Bill'] || '',
-                            shareUrl: foundUrl,
                             rows: []
                         };
                     }
@@ -823,7 +854,7 @@
                 }
             }
         } catch (err) {
-            console.log("Dùng cache nội bộ sẵn có.");
+            console.log("Sử dụng cache chuẩn.");
         }
     }
 
@@ -831,49 +862,20 @@
         const modal = document.getElementById('historyModal');
         if (modal) modal.style.display = 'flex';
 
-        // Quét thêm từ các link chia sẻ nếu có trong localStorage hoặc danh sách cũ
         let savedLocal = JSON.parse(localStorage.getItem('party_history_list') || '[]');
         
-        // Bổ sung các bữa nhậu mẫu từ mặc định nếu chưa có
+        // Luôn kiểm tra xem cache cũ có bị lỗi thiếu mảng rows hoặc rỗng không để nạp ngay dữ liệu chuẩn
+        let needsDefault = false;
         if (savedLocal.length === 0) {
-            savedLocal = [
-                {
-                    id: "Chốt Quý An Thuận Hưng_2026-09-18",
-                    name: "Chốt Quý An Thuận Hưng",
-                    date: "2026-09-18",
-                    loc: "Quản Nhỏ Nguyễn Khánh",
-                    bill: 4615000,
-                    note: "Đã gồm: 200k bọ múa, 640k 4t ultra, 250k bánh trung thu",
-                    rows: [
-                        { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 1400000 },
-                        { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 803750 },
-                        { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 803750 },
-                        { 'Tên người/NV': 'ĐỖ ĐÌNH BẢO', 'Chức danh': 'SR', 'Số tiền': 803750 },
-                        { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 803750 }
-                    ]
-                },
-                {
-                    id: "Chốt Q3'26_2026-09-11",
-                    name: "Chốt Q3'26",
-                    date: "2026-09-11",
-                    loc: "Nướng bò tre Đông Anh",
-                    bill: 3570000,
-                    note: "Đã gồm 800k 4t Ultra250 Đạt Tình",
-                    rows: [
-                        { 'Tên người/NV': 'HOÀNG CÔNG NHẬN', 'Chức danh': 'ASM', 'Số tiền': 600000 },
-                        { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 400000 },
-                        { 'Tên người/NV': 'LÝ HỒNG MINH', 'Chức danh': 'SS', 'Số tiền': 400000 },
-                        { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                        { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                        { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                        { 'Tên người/NV': 'NGUYỄN VĂN ĐẠT', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                        { 'Tên người/NV': 'NGUYỄN HỮU VINH', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                        { 'Tên người/NV': 'NGUYỄN HÀ NAM', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                        { 'Tên người/NV': 'CẨN TRUNG HIẾU', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                        { 'Tên người/NV': 'NGUYỄN NGỌC LONG', 'Chức danh': 'SR', 'Số tiền': 271250 }
-                    ]
-                }
-            ];
+            needsDefault = true;
+        } else {
+            // Kiểm tra xem các phần tử trong local có dòng rows nào bị trống số tiền không
+            let hasEmptyRows = savedLocal.some(p => !p.rows || p.rows.length === 0 || !p.rows[0]['Số tiền']);
+            if (hasEmptyRows) needsDefault = true;
+        }
+
+        if (needsDefault) {
+            savedLocal = getCompleteDefaultHistory();
             localStorage.setItem('party_history_list', JSON.stringify(savedLocal));
         }
 
@@ -987,11 +989,9 @@
             let decodedDate = cleanDateFormat(decodeURIComponent(date));
             if (decodedDate) {
                 document.getElementById('partyDate').value = decodedDate;
-                // Tự động lưu vào cache ngay khi mở link chia sẻ để lịch sử luôn đầy đủ
                 setTimeout(() => {
                     let totalB = parseFloat(bill) || 0;
                     let membersArr = [];
-                    // Lấy tạm thông tin thành viên từ DOM hiện tại
                     members.forEach(m => {
                         if (m.selected) membersArr.push({ name: m.name, role: m.role, amount: 0 });
                     });
@@ -1052,6 +1052,12 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Tự động làm sạch và nạp lại lịch sử chuẩn ngay khi khởi động trang để loại bỏ cache cũ lỗi
+        let savedLocal = JSON.parse(localStorage.getItem('party_history_list') || '[]');
+        if (savedLocal.length === 0 || savedLocal.some(p => !p.rows || p.rows.length === 0 || !p.rows[0]['Số tiền'])) {
+            localStorage.setItem('party_history_list', JSON.stringify(getCompleteDefaultHistory()));
+        }
+
         initFromUrlParams();
         switchMode('user');
         fetchHistoryBackground();
