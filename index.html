@@ -289,10 +289,28 @@
     window.rawSheetData = []; 
 
     function cleanDateFormat(dateStr) {
-        if (!dateStr) return 'N/A';
+        if (!dateStr) return '';
         let str = String(dateStr).trim();
-        if (str.includes('T')) str = str.split('T')[0];
-        if (str.includes(' ')) str = str.split(' ')[0];
+        // Nếu là định dạng ISO (2026-09-18T...) lấy phần ngày trực tiếp không bị lùi múi giờ
+        if (str.includes('T')) {
+            return str.split('T')[0];
+        }
+        if (str.includes(' ')) {
+            str = str.split(' ')[0];
+        }
+        let parts = str.split('-');
+        if (parts.length === 3 && parts[0].length === 4) {
+            return str;
+        }
+        try {
+            let d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                let year = d.getFullYear();
+                let month = String(d.getMonth() + 1).padStart(2, '0');
+                let day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+        } catch(e) {}
         return str;
     }
 
@@ -790,26 +808,43 @@
                 let partyGroupMap = {};
 
                 data.forEach(row => {
-                    let type = row['Loại'] || row.type || '';
+                    // Map chính xác các cột trên Sheet bạn đã liệt kê
+                    let type = row['Loại'] || '';
+                    let pName = row['Tên bữa nhậu'] || '';
+                    let pDateRaw = row['Ngày nhậu'] || '';
+                    
+                    if (!pName || !pDateRaw) return;
                     if (type && type !== 'HÓA ĐƠN' && type !== 'PARTY_SAVE') return;
 
-                    let pName = row['Tên bữa nhậu'] || row.partyName || row.name;
-                    let pDate = cleanDateFormat(row['Ngày nhậu'] || row.date);
-                    if (!pName) return;
-
+                    let pDate = cleanDateFormat(pDateRaw);
                     let key = `${pName}_${pDate}`;
+
                     if (!partyGroupMap[key]) {
                         partyGroupMap[key] = {
                             id: key,
                             name: pName,
                             date: pDate,
-                            loc: row['Địa điểm'] || row.location || 'N/A',
-                            bill: parseFloat(row['Tổng bill'] || row.totalBill) || 0,
-                            note: row['Ghi chú Bill'] || row.costNote || '',
+                            loc: row['Địa điểm'] || 'N/A',
+                            bill: 0,
+                            note: row['Ghi chú Bill'] || '',
                             rows: []
                         };
                     }
+
                     partyGroupMap[key].rows.push(row);
+
+                    let rowBill = parseFloat(row['Tổng bill']) || 0;
+                    if (rowBill > partyGroupMap[key].bill) {
+                        partyGroupMap[key].bill = rowBill;
+                    }
+                });
+
+                // Nếu cột tổng bill chưa ghi, tự cộng dồn từ số tiền các thành viên
+                Object.values(partyGroupMap).forEach(party => {
+                    let totalFromMembers = party.rows.reduce((sum, r) => sum + (parseFloat(r['Số tiền']) || 0), 0);
+                    if (party.bill <= 0) {
+                        party.bill = totalFromMembers;
+                    }
                 });
 
                 let summaryList = Object.values(partyGroupMap);
@@ -881,7 +916,7 @@
 
         document.getElementById('partyName').value = targetParty.name;
         document.getElementById('partyDate').value = targetParty.date;
-        document.getElementById('partyLocation').value = targetParty.loc;
+        document.getElementById('partyLocation').value = targetParty.loc !== 'N/A' ? targetParty.loc : '';
         document.getElementById('totalBill').value = targetParty.bill;
         document.getElementById('costNote').value = targetParty.note;
         updateNoteDisplay();
@@ -894,9 +929,9 @@
         });
 
         targetParty.rows.forEach(r => {
-            let personName = String(r['Tên người/NV'] || r['Tên người'] || r.name || '').trim().toUpperCase();
-            let amt = parseFloat(r['Số tiền'] || r.amount) || 0;
-            let roleStr = r['Chức danh'] || r.role || '';
+            let personName = String(r['Tên người/NV'] || '').trim().toUpperCase();
+            let amt = parseFloat(r['Số tiền']) || 0;
+            let roleStr = r['Chức danh'] || '';
 
             if (!personName || personName === 'TỔNG BỮA') return;
 
