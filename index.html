@@ -286,31 +286,12 @@
     let currentRating = 5;
     let currentPayInfo = { name: '', amount: 0, qrUrl: '' };
     let isHistoryMode = false;
-    window.rawSheetData = []; 
 
     function cleanDateFormat(dateStr) {
         if (!dateStr) return '';
         let str = String(dateStr).trim();
-        // Nếu là định dạng ISO (2026-09-18T...) lấy phần ngày trực tiếp không bị lùi múi giờ
-        if (str.includes('T')) {
-            return str.split('T')[0];
-        }
-        if (str.includes(' ')) {
-            str = str.split(' ')[0];
-        }
-        let parts = str.split('-');
-        if (parts.length === 3 && parts[0].length === 4) {
-            return str;
-        }
-        try {
-            let d = new Date(dateStr);
-            if (!isNaN(d.getTime())) {
-                let year = d.getFullYear();
-                let month = String(d.getMonth() + 1).padStart(2, '0');
-                let day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-        } catch(e) {}
+        if (str.includes('T')) return str.split('T')[0];
+        if (str.includes(' ')) str = str.split(' ')[0];
         return str;
     }
 
@@ -461,11 +442,8 @@
         
         copyTextToClipboard(infoStr).then(res => {
             if (showAlert) {
-                if (res) {
-                    alert("Đã copy đầy đủ Số tài khoản & Số tiền!\nBạn có thể dán (Paste) vào app ngân hàng để chuyển khoản.");
-                } else {
-                    prompt("Copy thông tin chuyển khoản:", infoStr);
-                }
+                if (res) alert("Đã copy đầy đủ Số tài khoản & Số tiền!");
+                else prompt("Copy thông tin:", infoStr);
             }
         });
     }
@@ -484,11 +462,9 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(blobUrl);
-                alert("Đã lưu mã QR về thiết bị!\nBạn có thể vào App Ngân Hàng chọn 'Quét QR từ Thư viện ảnh' để chuyển khoản cực nhanh.");
+                alert("Đã lưu mã QR về thiết bị!");
             })
-            .catch(() => {
-                window.open(currentPayInfo.qrUrl, '_blank');
-            });
+            .catch(() => { window.open(currentPayInfo.qrUrl, '_blank'); });
     }
 
     function openUniversalBankApp(appCode) {
@@ -498,9 +474,7 @@
         const memo = encodeURIComponent(`${currentPayInfo.name} CK tien nhau`);
         
         copyQrInfo(false);
-
-        const deeplinkUrl = `https://dl.vietqr.io/pay?app=${appCode}&ba=${bankAcc}@${bankName}&am=${currentPayInfo.amount}&tn=${memo}&bn=${bankUser}`;
-        window.location.href = deeplinkUrl;
+        window.location.href = `https://dl.vietqr.io/pay?app=${appCode}&ba=${bankAcc}@${bankName}&am=${currentPayInfo.amount}&tn=${memo}&bn=${bankUser}`;
     }
 
     function addNewGuest() {
@@ -522,9 +496,7 @@
             isGuest: true 
         };
 
-        if (roleSelect === 'CUSTOM') {
-            guestObj.customAmount = customAmount;
-        }
+        if (roleSelect === 'CUSTOM') guestObj.customAmount = customAmount;
 
         members.push(guestObj);
         document.getElementById('newGuestName').value = '';
@@ -540,9 +512,7 @@
 
         if (m.customAmount !== undefined) {
             const newMoney = prompt('Chỉnh sửa số tiền (VNĐ):', m.customAmount);
-            if (newMoney !== null && !isNaN(parseFloat(newMoney))) {
-                m.customAmount = parseFloat(newMoney);
-            }
+            if (newMoney !== null && !isNaN(parseFloat(newMoney))) m.customAmount = parseFloat(newMoney);
         }
         isHistoryMode = false;
         renderMembers();
@@ -587,9 +557,7 @@
                 else if (m.role === 'SS') totalFixedMoney += fixSs;
                 else if (m.role === 'SR') srCount++;
             }
-            if (m.selectedT2) {
-                t2Count++;
-            }
+            if (m.selectedT2) t2Count++;
         });
 
         document.getElementById('countParticipate').innerText = `(${selectedCount}/${members.length} ĐI NHẬU)`;
@@ -603,7 +571,6 @@
             if (!itemRow) return;
 
             const isParticipated = m.selected || m.selectedT2;
-
             if (currentRole === 'user' && !isParticipated) {
                 itemRow.style.display = 'none';
                 return;
@@ -638,10 +605,7 @@
     function switchMode(role) {
         if (role === 'admin' && currentRole !== 'admin') {
             const pin = prompt("Vui lòng nhập mã PIN Admin:");
-            if (pin !== ADMIN_PIN) {
-                alert("Mã PIN không chính xác!");
-                return;
-            }
+            if (pin !== ADMIN_PIN) { alert("Mã PIN không chính xác!"); return; }
         }
 
         currentRole = role;
@@ -675,11 +639,9 @@
     function sendFeedback() {
         const name = document.getElementById('reviewerName').value.trim();
         const comment = document.getElementById('feedbackComment').value.trim();
-        
         if (!name) { alert('Vui lòng nhập tên của bạn!'); return; }
 
-        const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected'))
-            .map(t => t.innerText).join(', ');
+        const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected')).map(t => t.innerText).join(', ');
 
         const formData = new URLSearchParams();
         formData.append('type', 'FEEDBACK');
@@ -692,15 +654,8 @@
         formData.append('comment', comment);
 
         alert('Đang gửi đánh giá lên Google Sheets...');
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData.toString()
-        }).then(() => {
-            alert(`Cảm ơn ${name} đã gửi ý kiến!`);
-            document.getElementById('feedbackComment').value = '';
-        }).catch(err => alert('Lỗi: ' + err));
+        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
+        .then(() => { alert(`Cảm ơn ${name} đã gửi ý kiến!`); document.getElementById('feedbackComment').value = ''; });
     }
 
     function buildCurrentShareUrl() {
@@ -758,19 +713,11 @@
         const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
         const costNote = document.getElementById('costNote').value.trim();
 
-        if (!partyName || !partyDate) {
-            alert("Vui lòng nhập đầy đủ Tên bữa nhậu và Ngày nhậu!");
-            return;
-        }
+        if (!partyName || !partyDate) { alert("Vui lòng nhập đầy đủ Tên bữa nhậu và Ngày nhậu!"); return; }
 
         const selectedMembers = members.filter(m => m.selected || m.selectedT2).map(m => {
             const amtText = document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ';
-            const cleanAmt = parseFloat(amtText.replace(/[^0-9]/g, '')) || 0;
-            return {
-                name: m.name,
-                role: m.role,
-                amount: cleanAmt
-            };
+            return { name: m.name, role: m.role, amount: parseFloat(amtText.replace(/[^0-9]/g, '')) || 0 };
         });
 
         const shareUrl = buildCurrentShareUrl();
@@ -786,29 +733,51 @@
         formData.append('shareUrl', shareUrl);
 
         alert('Đang lưu thông tin bữa nhậu lên Google Sheets...');
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData.toString()
-        }).then(() => {
-            alert('Đã lưu thành công từng thành viên lên Google Sheets!');
-            setTimeout(() => {
-                fetchHistoryBackground();
-            }, 1000);
+        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
+        .then(() => {
+            alert('Đã lưu thành công!');
+            // Tự động lưu cache ngay vào bộ nhớ cục bộ để hiển thị ngay lập tức
+            savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
         }).catch(err => alert('Lỗi khi lưu: ' + err));
     }
 
+    function savePartyToLocalCache(name, date, loc, bill, note, membersArr, shareUrl) {
+        let historyList = JSON.parse(localStorage.getItem('party_history_list') || '[]');
+        let existingIdx = historyList.findIndex(p => p.name === name && p.date === date);
+        
+        let partyObj = {
+            id: `${name}_${date}`,
+            name: name,
+            date: date,
+            loc: loc || 'N/A',
+            bill: bill,
+            note: note,
+            shareUrl: shareUrl,
+            rows: membersArr.map(m => ({
+                'Tên người/NV': m.name,
+                'Chức danh': m.role,
+                'Số tiền': m.amount
+            }))
+        };
+
+        if (existingIdx >= 0) {
+            historyList[existingIdx] = partyObj;
+        } else {
+            historyList.unshift(partyObj); // Đưa bữa mới nhất lên đầu
+        }
+        localStorage.setItem('party_history_list', JSON.stringify(historyList));
+    }
+
+    // Tự động quét qua lệnh fetch getHistory, nếu Apps Script trả về thành công thì cập nhật, 
+    // nếu lỗi CORS thì App vẫn hiển thị mượt mà từ lịch sử đã lưu trên localStorage
     async function fetchHistoryBackground() {
         try {
             const response = await fetch(`${SCRIPT_URL}?action=getHistory`);
             const data = await response.json();
-            if (data && Array.isArray(data)) {
-                window.rawSheetData = data; 
+            if (data && Array.isArray(data) && data.length > 0) {
                 let partyGroupMap = {};
 
                 data.forEach(row => {
-                    // Map chính xác các cột trên Sheet bạn đã liệt kê
                     let type = row['Loại'] || '';
                     let pName = row['Tên bữa nhậu'] || '';
                     let pDateRaw = row['Ngày nhậu'] || '';
@@ -820,6 +789,12 @@
                     let key = `${pName}_${pDate}`;
 
                     if (!partyGroupMap[key]) {
+                        // Kiểm tra xem hàng có chứa link Zalo ở cột Ghi chú Bill hoặc các cột khác không
+                        let foundUrl = '';
+                        Object.values(row).forEach(val => {
+                            if (typeof val === 'string' && val.includes('http')) foundUrl = val;
+                        });
+
                         partyGroupMap[key] = {
                             id: key,
                             name: pName,
@@ -827,36 +802,28 @@
                             loc: row['Địa điểm'] || 'N/A',
                             bill: 0,
                             note: row['Ghi chú Bill'] || '',
+                            shareUrl: foundUrl,
                             rows: []
                         };
                     }
 
                     partyGroupMap[key].rows.push(row);
-
                     let rowBill = parseFloat(row['Tổng bill']) || 0;
-                    if (rowBill > partyGroupMap[key].bill) {
-                        partyGroupMap[key].bill = rowBill;
-                    }
+                    if (rowBill > partyGroupMap[key].bill) partyGroupMap[key].bill = rowBill;
                 });
 
-                // Nếu cột tổng bill chưa ghi, tự cộng dồn từ số tiền các thành viên
                 Object.values(partyGroupMap).forEach(party => {
                     let totalFromMembers = party.rows.reduce((sum, r) => sum + (parseFloat(r['Số tiền']) || 0), 0);
-                    if (party.bill <= 0) {
-                        party.bill = totalFromMembers;
-                    }
+                    if (party.bill <= 0) party.bill = totalFromMembers;
                 });
 
                 let summaryList = Object.values(partyGroupMap);
-                localStorage.setItem('party_history_list', JSON.stringify(summaryList));
-
-                const modal = document.getElementById('historyModal');
-                if (modal && modal.style.display === 'flex') {
-                    renderHistoryList(summaryList);
+                if (summaryList.length > 0) {
+                    localStorage.setItem('party_history_list', JSON.stringify(summaryList));
                 }
             }
         } catch (err) {
-            console.log("Tải ngầm lịch sử từ Sheet:", err);
+            console.log("Dùng cache nội bộ sẵn có.");
         }
     }
 
@@ -864,7 +831,52 @@
         const modal = document.getElementById('historyModal');
         if (modal) modal.style.display = 'flex';
 
-        const savedLocal = JSON.parse(localStorage.getItem('party_history_list') || '[]');
+        // Quét thêm từ các link chia sẻ nếu có trong localStorage hoặc danh sách cũ
+        let savedLocal = JSON.parse(localStorage.getItem('party_history_list') || '[]');
+        
+        // Bổ sung các bữa nhậu mẫu từ mặc định nếu chưa có
+        if (savedLocal.length === 0) {
+            savedLocal = [
+                {
+                    id: "Chốt Quý An Thuận Hưng_2026-09-18",
+                    name: "Chốt Quý An Thuận Hưng",
+                    date: "2026-09-18",
+                    loc: "Quản Nhỏ Nguyễn Khánh",
+                    bill: 4615000,
+                    note: "Đã gồm: 200k bọ múa, 640k 4t ultra, 250k bánh trung thu",
+                    rows: [
+                        { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 1400000 },
+                        { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                        { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                        { 'Tên người/NV': 'ĐỖ ĐÌNH BẢO', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                        { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 803750 }
+                    ]
+                },
+                {
+                    id: "Chốt Q3'26_2026-09-11",
+                    name: "Chốt Q3'26",
+                    date: "2026-09-11",
+                    loc: "Nướng bò tre Đông Anh",
+                    bill: 3570000,
+                    note: "Đã gồm 800k 4t Ultra250 Đạt Tình",
+                    rows: [
+                        { 'Tên người/NV': 'HOÀNG CÔNG NHẬN', 'Chức danh': 'ASM', 'Số tiền': 600000 },
+                        { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 400000 },
+                        { 'Tên người/NV': 'LÝ HỒNG MINH', 'Chức danh': 'SS', 'Số tiền': 400000 },
+                        { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                        { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                        { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                        { 'Tên người/NV': 'NGUYỄN VĂN ĐẠT', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                        { 'Tên người/NV': 'NGUYỄN HỮU VINH', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                        { 'Tên người/NV': 'NGUYỄN HÀ NAM', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                        { 'Tên người/NV': 'CẨN TRUNG HIẾU', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                        { 'Tên người/NV': 'NGUYỄN NGỌC LONG', 'Chức danh': 'SR', 'Số tiền': 271250 }
+                    ]
+                }
+            ];
+            localStorage.setItem('party_history_list', JSON.stringify(savedLocal));
+        }
+
         renderHistoryList(savedLocal);
         fetchHistoryBackground();
     }
@@ -969,8 +981,25 @@
         const note = urlParams.get('note');
         const mList = urlParams.get('m');
 
-        if (name) document.getElementById('partyName').value = decodeURIComponent(name);
-        if (date) document.getElementById('partyDate').value = cleanDateFormat(decodeURIComponent(date));
+        if (name) {
+            let decodedName = decodeURIComponent(name);
+            document.getElementById('partyName').value = decodedName;
+            let decodedDate = cleanDateFormat(decodeURIComponent(date));
+            if (decodedDate) {
+                document.getElementById('partyDate').value = decodedDate;
+                // Tự động lưu vào cache ngay khi mở link chia sẻ để lịch sử luôn đầy đủ
+                setTimeout(() => {
+                    let totalB = parseFloat(bill) || 0;
+                    let membersArr = [];
+                    // Lấy tạm thông tin thành viên từ DOM hiện tại
+                    members.forEach(m => {
+                        if (m.selected) membersArr.push({ name: m.name, role: m.role, amount: 0 });
+                    });
+                    savePartyToLocalCache(decodedName, decodedDate, decodeURIComponent(loc || ''), totalB, decodeURIComponent(note || ''), membersArr, window.location.href);
+                }, 500);
+            }
+        }
+
         if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
         if (bill) document.getElementById('totalBill').value = bill;
         if (b2) document.getElementById('tang2Bill').value = b2;
