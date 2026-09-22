@@ -647,6 +647,8 @@
         const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
         const totalBill = document.getElementById('totalBill').value || '0';
         const tang2Bill = document.getElementById('tang2Bill').value || '0';
+        const fixAsm = document.getElementById('fixAsm').value || '600000';
+        const fixSs = document.getElementById('fixSs').value || '400000';
         
         let noteInput = document.getElementById('costNote').value.trim();
         if (!noteInput) {
@@ -668,13 +670,14 @@
                 if (m.isGuest) {
                     encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}_${flagStr}`);
                 } else {
-                    encodedMembers.push(`${m.code}_${flagStr}`);
+                    const customAmt = m.customAmount !== undefined ? `_${m.customAmount}` : '';
+                    encodedMembers.push(`${m.code}${customAmt}_${flagStr}`);
                 }
             }
         });
 
         const baseUrl = window.location.origin + window.location.pathname;
-        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&b2=${tang2Bill}&note=${costNote}&m=${encodedMembers.join(',')}`;
+        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&b2=${tang2Bill}&fasm=${fixAsm}&fss=${fixSs}&note=${costNote}&m=${encodedMembers.join(',')}`;
     }
 
     function copyWebLink() {
@@ -699,22 +702,25 @@
         }
 
         const selectedList = members.filter(m => m.selected || m.selectedT2).map(m => {
-            return {
-                code: m.code,
-                name: m.name,
-                role: m.role,
-                amount: document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ'
-            };
-        });
+            const amountText = document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ';
+            return `${m.name} (${m.role}): ${amountText}`;
+        }).join('\n');
 
         const payload = {
             type: 'PARTY_SAVE',
+            action: 'saveParty',
             date: partyDate,
+            partyDate: partyDate,
             partyName: partyName,
+            name: partyName,
             location: location,
+            loc: location,
             totalBill: totalBill + tang2Bill,
+            bill: totalBill + tang2Bill,
             costNote: costNote,
-            members: selectedList
+            note: costNote,
+            members: selectedList,
+            selectedCodes: buildCurrentShareUrl()
         };
 
         saveToLocalHistory({ partyName, date: partyDate, location, totalBill, tang2Bill, costNote });
@@ -745,7 +751,8 @@
                 if (m.isGuest) {
                     encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${m.customAmount || 0}_${flagStr}`);
                 } else {
-                    encodedMembers.push(`${m.code}_${flagStr}`);
+                    const customAmt = m.customAmount !== undefined ? `_${m.customAmount}` : '';
+                    encodedMembers.push(`${m.code}${customAmt}_${flagStr}`);
                 }
             }
         });
@@ -906,7 +913,8 @@
             if (codeStr) {
                 let parts = codeStr.split('_');
                 let mainCode = parts[0];
-                let flags = parts.length > 1 ? parts[parts.length - 1] : 'T1';
+                let customVal = parts.length > 2 ? parseFloat(parts[1]) : undefined;
+                let flags = parts[parts.length - 1];
 
                 let isT1 = flags.includes('T1') || !flags.includes('T2');
                 let isT2 = flags.includes('T2');
@@ -929,6 +937,9 @@
                     if (m) {
                         m.selected = isT1;
                         m.selectedT2 = isT2;
+                        if (customVal !== undefined && !isNaN(customVal)) {
+                            m.customAmount = customVal;
+                        }
                     }
                 }
             }
@@ -952,6 +963,8 @@
         const loc = urlParams.get('loc');
         const bill = urlParams.get('bill');
         const b2 = urlParams.get('b2');
+        const fasm = urlParams.get('fasm');
+        const fss = urlParams.get('fss');
         const note = urlParams.get('note');
         const mList = urlParams.get('m');
 
@@ -960,6 +973,8 @@
         if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
         if (bill) document.getElementById('totalBill').value = bill;
         if (b2) document.getElementById('tang2Bill').value = b2;
+        if (fasm) document.getElementById('fixAsm').value = fasm;
+        if (fss) document.getElementById('fixSs').value = fss;
         if (note) {
             document.getElementById('costNote').value = decodeURIComponent(note);
             updateNoteDisplay();
@@ -972,7 +987,8 @@
             codes.forEach(codeStr => {
                 let parts = codeStr.split('_');
                 let mainCode = parts[0];
-                let flags = parts.length > 1 ? parts[parts.length - 1] : 'T1';
+                let customVal = parts.length > 2 ? parseFloat(parts[1]) : undefined;
+                let flags = parts[parts.length - 1];
 
                 let isT1 = flags.includes('T1') || !flags.includes('T2');
                 let isT2 = flags.includes('T2');
@@ -995,6 +1011,9 @@
                     if (m) {
                         m.selected = isT1;
                         m.selectedT2 = isT2;
+                        if (customVal !== undefined && !isNaN(customVal)) {
+                            m.customAmount = customVal;
+                        }
                     }
                 }
             });
