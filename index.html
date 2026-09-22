@@ -90,7 +90,7 @@
         
         /* Grid App Bank */
         .bank-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; }
-        .bank-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 2px; text-decoration: none; color: #1e293b; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .bank-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 2px; text-decoration: none; color: #1e293b; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .bank-btn:active { background: #e2e8f0; transform: scale(0.95); }
         .bank-icon { font-size: 16px; margin-bottom: 2px; }
     </style>
@@ -236,20 +236,20 @@
             <p style="font-size:18px; font-weight:800; color:#c8102e; margin:2px 0;" id="qrAmountDisplay"></p>
             <img id="qrImageDisplay" src="" class="qr-popup-img" alt="Mã QR Chuyển Khoản">
             
-            <button type="button" class="btn-act btn-share" style="width:100%; margin:8px 0;" onclick="copyQrInfo()">📋 Copy Số TK & Số Tiền</button>
+            <button type="button" class="btn-act btn-share" style="width:100%; margin:8px 0;" onclick="copyQrInfo(true)">📋 Copy Số TK & Số Tiền</button>
 
             <p style="font-size:11px; font-weight:700; color:#002d72; margin-top:8px;">MỞ NHANH APP NGÂN HÀNG TRÊN DI ĐỘNG:</p>
             <div class="bank-grid">
-                <a href="vietcombank://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💚</span>VCB</a>
-                <a href="mbmobile://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💙</span>MBBank</a>
-                <a href="tcb://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">❤️</span>Techcom</a>
-                <a href="vpbankneo://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💚</span>VPBank</a>
-                <a href="vietinbankiplay://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💙</span>Vietin</a>
-                <a href="bidvsmartbanking://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💚</span>BIDV</a>
-                <a href="agribankmbooking://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">🤎</span>Agri</a>
-                <a href="acbone://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💙</span>ACB</a>
-                <a href="tpbankmobile://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💜</span>TPBank</a>
-                <a href="msbmobile://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">🧡</span>MSB</a>
+                <button type="button" class="bank-btn" onclick="openBankApp('vietcombank://')"><span class="bank-icon">💚</span>VCB</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('mbmobile://')"><span class="bank-icon">💙</span>MBBank</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('tcb://')"><span class="bank-icon">❤️</span>Techcom</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('vpbankneo://')"><span class="bank-icon">💚</span>VPBank</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('vietinbankiplay://')"><span class="bank-icon">💙</span>Vietin</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('bidvsmartbanking://')"><span class="bank-icon">💚</span>BIDV</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('agribankmbooking://')"><span class="bank-icon">🤎</span>Agri</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('acbone://')"><span class="bank-icon">💙</span>ACB</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('tpbankmobile://')"><span class="bank-icon">💜</span>TPBank</button>
+                <button type="button" class="bank-btn" onclick="openBankApp('msbmobile://')"><span class="bank-icon">🧡</span>MSB</button>
             </div>
         </div>
     </div>
@@ -392,7 +392,7 @@
         document.getElementById('qrModal').style.display = 'none';
     }
 
-    function copyQrInfo() {
+    function copyQrInfo(showAlert = false) {
         const bankName = document.getElementById('bankName').value;
         const bankAcc = document.getElementById('bankAcc').value;
         const bankUser = document.getElementById('bankUser').value;
@@ -400,12 +400,21 @@
         const infoStr = `NGÂN HÀNG: ${bankName}\nSTK: ${bankAcc}\nCHỦ TK: ${bankUser}\nSỐ TIỀN: ${currentPayInfo.amount.toLocaleString('vi-VN')} VNĐ\nNỘI DUNG: ${currentPayInfo.name} CK tien nhau`;
         
         copyTextToClipboard(infoStr).then(res => {
-            if (res) {
-                alert("Đã copy đầy đủ Số tài khoản & Số tiền!\nBạn có thể dán (Paste) vào app ngân hàng để chuyển khoản.");
-            } else {
-                prompt("Copy thông tin chuyển khoản:", infoStr);
+            if (showAlert) {
+                if (res) {
+                    alert("Đã copy đầy đủ Số tài khoản & Số tiền!\nBạn có thể dán (Paste) vào app ngân hàng để chuyển khoản.");
+                } else {
+                    prompt("Copy thông tin chuyển khoản:", infoStr);
+                }
             }
         });
+    }
+
+    function openBankApp(schemeUrl) {
+        copyQrInfo(false);
+        setTimeout(() => {
+            window.location.href = schemeUrl;
+        }, 100);
     }
 
     function addNewGuest() {
