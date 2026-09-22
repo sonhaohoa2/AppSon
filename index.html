@@ -75,7 +75,7 @@
 
         /* Modal Popup */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
-        .modal-content { background: #fff; width: 100%; max-width: 450px; max-height: 85vh; border-radius: 12px; padding: 16px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content { background: #fff; width: 100%; max-width: 450px; max-height: 90vh; border-radius: 12px; padding: 16px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
         .modal-header h3 { font-size: 16px; color: var(--michelob-blue); }
         .btn-close { background: #cbd5e1; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; }
@@ -86,7 +86,13 @@
         .btn-delete-history { background: #ef4444; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; }
         .btn-copy-item { background: #16a34a; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; display: block; text-align: center; }
         
-        .qr-popup-img { width: 100%; max-width: 280px; border-radius: 12px; border: 1px solid #e2e8f0; margin: 10px auto; display: block; }
+        .qr-popup-img { width: 100%; max-width: 250px; border-radius: 12px; border: 1px solid #e2e8f0; margin: 6px auto; display: block; }
+        
+        /* Grid App Bank */
+        .bank-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; }
+        .bank-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 2px; text-decoration: none; color: #1e293b; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .bank-btn:active { background: #e2e8f0; transform: scale(0.95); }
+        .bank-icon { font-size: 16px; margin-bottom: 2px; }
     </style>
 </head>
 <body>
@@ -122,7 +128,6 @@
                 <label>💰 Bill Tăng 1 (VNĐ):</label>
                 <input type="number" id="totalBill" placeholder="0" class="admin-edit" onchange="calculateMoney()">
             </div>
-            <!-- Bổ sung Bill Tăng 2 -->
             <div class="info-row" id="tang2Row" style="display:none; background:#fff7ed; padding:4px 6px; border-radius:6px; border:1px solid #ffedd5;">
                 <label style="color:#c2410c;">🔥 Bill Tăng 2 (VNĐ):</label>
                 <input type="number" id="tang2Bill" placeholder="0" class="admin-edit" onchange="calculateMoney()" style="border-color:#fdba74;">
@@ -223,15 +228,29 @@
 <div id="qrModal" class="modal-overlay">
     <div class="modal-content" style="text-align: center;">
         <div class="modal-header">
-            <h3 id="qrModalTitle">📲 MÃ QUÉT CHUYỂN KHẢOẢN</h3>
+            <h3>📲 MÃ QUÉT CHUYỂN KHỎAN</h3>
             <button class="btn-close" onclick="closeQrModal()">✕ Đóng</button>
         </div>
         <div id="qrModalBody">
             <p style="font-size:13px; font-weight:700; color:#1e293b;" id="qrMemberName"></p>
-            <p style="font-size:18px; font-weight:800; color:#c8102e; margin:4px 0;" id="qrAmountDisplay"></p>
+            <p style="font-size:18px; font-weight:800; color:#c8102e; margin:2px 0;" id="qrAmountDisplay"></p>
             <img id="qrImageDisplay" src="" class="qr-popup-img" alt="Mã QR Chuyển Khoản">
-            <p style="font-size:11px; color:#64748b; margin-bottom:12px;">Mở ứng dụng Ngân hàng bất kỳ trên điện thoại để quét mã QR</p>
-            <button type="button" class="btn-act btn-share" style="width:100%; margin-bottom:6px;" onclick="copyQrInfo()">📋 Copy Số TK & Số Tiền</button>
+            
+            <button type="button" class="btn-act btn-share" style="width:100%; margin:8px 0;" onclick="copyQrInfo()">📋 Copy Số TK & Số Tiền</button>
+
+            <p style="font-size:11px; font-weight:700; color:#002d72; margin-top:8px;">MỞ NHANH APP NGÂN HÀNG TRÊN DI ĐỘNG:</p>
+            <div class="bank-grid">
+                <a href="vietcombank://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💚</span>VCB</a>
+                <a href="mbmobile://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💙</span>MBBank</a>
+                <a href="tcb://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">❤️</span>Techcom</a>
+                <a href="vpbankneo://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💚</span>VPBank</a>
+                <a href="vietinbankiplay://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💙</span>Vietin</a>
+                <a href="bidvsmartbanking://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💚</span>BIDV</a>
+                <a href="agribankmbooking://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">🤎</span>Agri</a>
+                <a href="acbone://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💙</span>ACB</a>
+                <a href="tpbankmobile://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">💜</span>TPBank</a>
+                <a href="msbmobile://" class="bank-btn" onclick="copyQrInfo()"><span class="bank-icon">🧡</span>MSB</a>
+            </div>
         </div>
     </div>
 </div>
@@ -374,10 +393,18 @@
     }
 
     function copyQrInfo() {
+        const bankName = document.getElementById('bankName').value;
         const bankAcc = document.getElementById('bankAcc').value;
-        const infoStr = `STK: ${bankAcc} | Số tiền: ${currentPayInfo.amount.toLocaleString('vi-VN')} đ | Nội dung: ${currentPayInfo.name} CK tien nhau`;
-        copyTextToClipboard(infoStr).then(() => {
-            alert("Đã copy thông tin tài khoản và số tiền vào bộ nhớ tạm!");
+        const bankUser = document.getElementById('bankUser').value;
+
+        const infoStr = `NGÂN HÀNG: ${bankName}\nSTK: ${bankAcc}\nCHỦ TK: ${bankUser}\nSỐ TIỀN: ${currentPayInfo.amount.toLocaleString('vi-VN')} VNĐ\nNỘI DUNG: ${currentPayInfo.name} CK tien nhau`;
+        
+        copyTextToClipboard(infoStr).then(res => {
+            if (res) {
+                alert("Đã copy đầy đủ Số tài khoản & Số tiền!\nBạn có thể dán (Paste) vào app ngân hàng để chuyển khoản.");
+            } else {
+                prompt("Copy thông tin chuyển khoản:", infoStr);
+            }
         });
     }
 
@@ -498,7 +525,6 @@
 
             document.getElementById(`amount_${idx}`).innerText = finalAmount.toLocaleString('vi-VN') + ' đ';
 
-            // Dòng ghi chú Tăng 2 màu đỏ cho thành viên
             const t2NoteElem = document.getElementById(`tang2Note_${idx}`);
             if (t2NoteElem) {
                 if (t2Amount > 0) {
