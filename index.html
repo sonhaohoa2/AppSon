@@ -212,7 +212,6 @@
     </div>
 </div>
 
-<!-- Modal Lịch Sử -->
 <div id="historyModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header">
@@ -223,7 +222,6 @@
     </div>
 </div>
 
-<!-- Modal Popup Quét QR Thanh Toán -->
 <div id="qrModal" class="modal-overlay">
     <div class="modal-content" style="text-align: center;">
         <div class="modal-header">
@@ -684,7 +682,6 @@
                 if (m.selectedT2) flags.push('T2');
                 const flagStr = flags.join('&');
 
-                // Lấy chính xác số tiền thực tế đang hiển thị trên màn hình của từng người để đóng băng vào link
                 let amtElem = document.getElementById(`amount_${idx}`);
                 let currentAmt = 0;
                 if (amtElem) {
@@ -747,11 +744,11 @@
     }
 
     function savePartyToLocalCache(name, date, loc, bill, note, membersArr, shareUrl) {
-        let historyList = JSON.parse(localStorage.getItem('party_history_list') || '[]');
-        let existingIdx = historyList.findIndex(p => p.name === name && p.date === date);
+        let historyList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
+        let partyId = `${name}_${date}`;
         
         let partyObj = {
-            id: `${name}_${date}`,
+            id: partyId,
             name: name,
             date: date,
             loc: loc || 'N/A',
@@ -765,12 +762,11 @@
             }))
         };
 
-        if (existingIdx >= 0) {
-            historyList[existingIdx] = partyObj;
-        } else {
-            historyList.unshift(partyObj);
-        }
-        localStorage.setItem('party_history_list', JSON.stringify(historyList));
+        // Lọc bỏ các bản ghi trùng ID cũ để chống nhân bản
+        historyList = historyList.filter(p => p.id !== partyId);
+        historyList.unshift(partyObj);
+        
+        localStorage.setItem('party_history_extra', JSON.stringify(historyList));
     }
 
     function getCompleteDefaultHistory() {
@@ -818,14 +814,18 @@
         const modal = document.getElementById('historyModal');
         if (modal) modal.style.display = 'flex';
 
-        // Luôn sử dụng danh sách chuẩn đã định nghĩa sẵn để đảm bảo 100% nút nào cũng bấm được
         let savedLocal = getCompleteDefaultHistory();
-        
-        // Hợp nhất thêm các bữa nhậu mới được lưu trong localStorage (nếu có)
         let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-        let combined = [...extraList, ...savedLocal];
         
-        renderHistoryList(combined);
+        // Hợp nhất và loại bỏ các bản ghi trùng lặp ID hoàn toàn
+        let mapCombined = new Map();
+        [...extraList, ...savedLocal].forEach(item => {
+            if (!mapCombined.has(item.id)) {
+                mapCombined.set(item.id, item);
+            }
+        });
+
+        renderHistoryList(Array.from(mapCombined.values()));
     }
 
     function closeHistoryModal() {
@@ -989,22 +989,23 @@
                 }
             });
 
-            // Lưu tạm vào cache phụ để khi bấm copy link lại vẫn giữ nguyên vẹn
             if (name && date) {
                 let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
                 let partyId = `${decodeURIComponent(name)}_${cleanDateFormat(decodeURIComponent(date))}`;
-                if (!extraList.some(p => p.id === partyId)) {
-                    extraList.unshift({
-                        id: partyId,
-                        name: decodeURIComponent(name),
-                        date: cleanDateFormat(decodeURIComponent(date)),
-                        loc: decodeURIComponent(loc || 'N/A'),
-                        bill: parseFloat(bill) || 0,
-                        note: decodeURIComponent(note || ''),
-                        rows: loadedRows
-                    });
-                    localStorage.setItem('party_history_extra', JSON.stringify(extraList));
-                }
+                
+                let partyObj = {
+                    id: partyId,
+                    name: decodeURIComponent(name),
+                    date: cleanDateFormat(decodeURIComponent(date)),
+                    loc: decodeURIComponent(loc || 'N/A'),
+                    bill: parseFloat(bill) || 0,
+                    note: decodeURIComponent(note || ''),
+                    rows: loadedRows
+                };
+
+                extraList = extraList.filter(p => p.id !== partyId);
+                extraList.unshift(partyObj);
+                localStorage.setItem('party_history_extra', JSON.stringify(extraList));
             }
         }
         renderMembers();
