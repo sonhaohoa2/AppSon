@@ -290,12 +290,8 @@
     function cleanDateFormat(dateStr) {
         if (!dateStr) return 'N/A';
         let str = String(dateStr).trim();
-        if (str.includes('T')) {
-            str = str.split('T')[0];
-        }
-        if (str.includes(' ')) {
-            str = str.split(' ')[0];
-        }
+        if (str.includes('T')) str = str.split('T')[0];
+        if (str.includes(' ')) str = str.split(' ')[0];
         return str;
     }
 
@@ -755,6 +751,7 @@
             loc: raw.loc || raw['Địa điểm'] || 'N/A',
             bill: raw.bill || raw['Tổng bill'] || 0,
             note: raw.note || raw['Ghi chú Bill'] || '',
+            membersList: raw.membersList || raw['Tên người/NV'] || raw['Tên người'] || '',
             selectedCodes: raw.selectedCodes || raw.shareUrl || ''
         };
     }
@@ -836,6 +833,7 @@
         const item = normalizeItem(rawItem, 0);
 
         let targetUrlStr = item.selectedCodes;
+        
         if (!targetUrlStr || !targetUrlStr.includes('http')) {
             const baseUrl = window.location.origin + window.location.pathname;
             const pName = encodeURIComponent(item.name || '');
@@ -843,7 +841,22 @@
             const pLoc = encodeURIComponent(item.loc || '');
             const pBill = item.bill || '0';
             const pNote = encodeURIComponent(item.note || '');
-            targetUrlStr = `${baseUrl}?name=${pName}&date=${pDate}&loc=${pLoc}&bill=${pBill}&note=${pNote}`;
+            
+            let matchedCodes = [];
+            if (item.membersList && item.membersList !== 'TỔNG BỮA') {
+                const namesInSheet = String(item.membersList).toUpperCase();
+                defaultMembers.forEach(m => {
+                    if (namesInSheet.includes(m.name.toUpperCase())) {
+                        matchedCodes.push(`${m.code}_T1`);
+                    }
+                });
+            }
+
+            if (matchedCodes.length === 0) {
+                defaultMembers.forEach(m => matchedCodes.push(`${m.code}_T1`));
+            }
+
+            targetUrlStr = `${baseUrl}?name=${pName}&date=${pDate}&loc=${pLoc}&bill=${pBill}&note=${pNote}&m=${matchedCodes.join(',')}`;
         }
 
         const targetUrl = new URL(targetUrlStr);
