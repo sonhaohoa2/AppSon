@@ -240,16 +240,16 @@
 
             <p style="font-size:11px; font-weight:700; color:#002d72; margin-top:8px;">MỞ NHANH APP NGÂN HÀNG TRÊN DI ĐỘNG:</p>
             <div class="bank-grid">
-                <button type="button" class="bank-btn" onclick="openBankApp('vietcombank://')"><span class="bank-icon">💚</span>VCB</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('mbmobile://')"><span class="bank-icon">💙</span>MBBank</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('tcb://')"><span class="bank-icon">❤️</span>Techcom</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('vpbankneo://')"><span class="bank-icon">💚</span>VPBank</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('vietinbankiplay://')"><span class="bank-icon">💙</span>Vietin</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('bidvsmartbanking://')"><span class="bank-icon">💚</span>BIDV</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('agribankmbooking://')"><span class="bank-icon">🤎</span>Agri</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('acbone://')"><span class="bank-icon">💙</span>ACB</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('tpbankmobile://')"><span class="bank-icon">💜</span>TPBank</button>
-                <button type="button" class="bank-btn" onclick="openBankApp('msbmobile://')"><span class="bank-icon">🧡</span>MSB</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('vcb')"><span class="bank-icon">💚</span>VCB</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('mb')"><span class="bank-icon">💙</span>MBBank</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('tcb')"><span class="bank-icon">❤️</span>Techcom</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('vp')"><span class="bank-icon">💚</span>VPBank</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('icb')"><span class="bank-icon">💙</span>Vietin</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('bidv')"><span class="bank-icon">💚</span>BIDV</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('vaba')"><span class="bank-icon">🤎</span>Agri</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('acb')"><span class="bank-icon">💙</span>ACB</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('tpb')"><span class="bank-icon">💜</span>TPBank</button>
+                <button type="button" class="bank-btn" onclick="openUniversalBankApp('msb')"><span class="bank-icon">🧡</span>MSB</button>
             </div>
         </div>
     </div>
@@ -410,11 +410,18 @@
         });
     }
 
-    function openBankApp(schemeUrl) {
+    function openUniversalBankApp(appCode) {
+        const bankName = document.getElementById('bankName').value.toLowerCase();
+        const bankAcc = document.getElementById('bankAcc').value;
+        const bankUser = encodeURIComponent(document.getElementById('bankUser').value);
+        const memo = encodeURIComponent(`${currentPayInfo.name} CK tien nhau`);
+        
         copyQrInfo(false);
-        setTimeout(() => {
-            window.location.href = schemeUrl;
-        }, 100);
+
+        // Universal Deeplink chuẩn của VietQR/Napas
+        const deeplinkUrl = `https://dl.vietqr.io/pay?app=${appCode}&ba=${bankAcc}@${bankName}&am=${currentPayInfo.amount}&tn=${memo}&bn=${bankUser}`;
+        
+        window.location.href = deeplinkUrl;
     }
 
     function addNewGuest() {
