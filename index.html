@@ -770,27 +770,27 @@ function preloadHistory() {
     }
 
     function loadHistoryItem(id) {
-        if (!cachedHistory) return;
-        const match = cachedHistory.find(h => String(h.id) === String(id));
-        if (!match) return;
+    if (!cachedHistory) return;
+    const match = cachedHistory.find(h => String(h.id) === String(id));
+    if (!match) return;
 
-        isHistoryMode = true;
+    isHistoryMode = true;
 
-        document.getElementById('partyDate').value = cleanDateFormat(match.date);
-        document.getElementById('partyName').value = match.partyName || '';
-        document.getElementById('partyLocation').value = match.location || '';
-        document.getElementById('totalBill').value = match.totalBill || 0;
-        document.getElementById('tang2Bill').value = match.tang2Bill || 0;
-        document.getElementById('costNote').value = match.costNote || '';
-        updateNoteDisplay();
+    document.getElementById('partyDate').value = cleanDateFormat(match.date);
+    document.getElementById('partyName').value = match.partyName || '';
+    document.getElementById('partyLocation').value = match.location || '';
+    document.getElementById('totalBill').value = match.totalBill || 0;
+    document.getElementById('tang2Bill').value = match.tang2Bill || 0;
+    document.getElementById('costNote').value = match.costNote || '';
+    updateNoteDisplay();
 
-        if (match.members && Array.isArray(match.members)) {
-            members = match.members;
-        }
-
-        renderMembers();
-        closeHistoryModal();
+    if (match.members && Array.isArray(match.members) && match.members.length > 0) {
+        members = match.members;
     }
+
+    renderMembers();
+    closeHistoryModal();
+}
 
     function closeHistoryModal() {
         document.getElementById('historyModal').style.display = 'none';
