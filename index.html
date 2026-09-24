@@ -256,20 +256,21 @@
     const ADMIN_PIN = "3979"; 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzv3jfnwtyJTq1ymTC27CNRcXVxf8v6w9qdmAT3xYlakZRE9bbPqOBqD1LIqLTlpnlr/exec"; 
 
-    let cachedHistory = null; 
+    let cachedHistory = null; // Lưu dữ liệu lịch sử tải ngầm
 
+// Tải ngầm ngay khi app vừa load xong
 document.addEventListener('DOMContentLoaded', () => {
     preloadHistory();
-    renderMembers();
 });
 
 function preloadHistory() {
     fetch(SCRIPT_URL + "?action=getHistory")
         .then(response => response.json())
-        .then(data => { cachedHistory = data; })
+        .then(data => {
+            cachedHistory = data;
+        })
         .catch(err => console.log("Tải ngầm lịch sử chưa xong hoặc lỗi:", err));
 }
-
     const defaultMembers = [
         { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: false, isGuest: false, selectedT2: false },
         { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: false, isGuest: false, selectedT2: false },
@@ -298,27 +299,6 @@ function preloadHistory() {
     let currentRating = 5;
     let currentPayInfo = { name: '', amount: 0, qrUrl: '' };
     let isHistoryMode = false;
-
-    function switchMode(mode) {
-        if (mode === 'admin') {
-            const pin = prompt("Nhập mã PIN Quản trị (Admin Sơn):");
-            if (pin !== ADMIN_PIN) {
-                alert("Mã PIN không đúng!");
-                return;
-            }
-        }
-        currentRole = mode;
-        document.getElementById('modeUser').classList.toggle('active', mode === 'user');
-        document.getElementById('modeAdmin').classList.toggle('active', mode === 'admin');
-        document.getElementById('adminPanel').style.display = (mode === 'admin') ? 'block' : 'none';
-        document.getElementById('addGuestBox').style.display = (mode === 'admin') ? 'block' : 'none';
-        document.getElementById('tang2Row').style.display = (mode === 'admin') ? 'flex' : 'none';
-        document.getElementById('noteInputRow').style.display = (mode === 'admin') ? 'flex' : 'none';
-        document.getElementById('btnCalc').style.display = (mode === 'admin') ? 'block' : 'none';
-        document.getElementById('btnSaveSheets').style.display = (mode === 'admin') ? 'block' : 'none';
-        
-        renderMembers();
-    }
 
     function cleanDateFormat(dateStr) {
         if (!dateStr) return '';
@@ -577,225 +557,518 @@ function preloadHistory() {
         const fixAsm = parseFloat(document.getElementById('fixAsm').value) || 0;
         const fixSs = parseFloat(document.getElementById('fixSs').value) || 0;
 
-        let selectedT1 = members.filter(m => m.selected);
-        let selectedT2 = members.filter(m => m.selectedT2);
-
-        document.getElementById('countParticipate').innerText = `(${selectedT1.length}/${members.length} ĐI NHẬU)`;
-
-        // 1. Phân bổ Tăng 1
-        let customSum = 0;
-        let asmCount = 0;
-        let ssCount = 0;
+        let selectedCount = 0;
+        let totalFixedMoney = 0;
         let srCount = 0;
+        let t2Count = 0;
 
-        selectedT1.forEach(m => {
-            if (m.customAmount !== undefined) customSum += m.customAmount;
-            else if (m.role === 'ASM') asmCount++;
-            else if (m.role === 'SS') ssCount++;
-            else srCount++;
+        members.forEach(m => {
+            if (m.selected) {
+                selectedCount++;
+                if (m.customAmount !== undefined) totalFixedMoney += m.customAmount;
+                else if (m.role === 'ASM') totalFixedMoney += fixAsm;
+                else if (m.role === 'SS') totalFixedMoney += fixSs;
+                else if (m.role === 'SR') srCount++;
+            }
+            if (m.selectedT2) t2Count++;
         });
 
-        let billRemaining = totalBill - customSum - (asmCount * fixAsm) - (ssCount * fixSs);
-        if (billRemaining < 0) billRemaining = 0;
+        document.getElementById('countParticipate').innerText = `(${selectedCount}/${members.length} ĐI NHẬU)`;
 
-        let shareSR = srCount > 0 ? (billRemaining / srCount) : 0;
-
-        // 2. Phân bổ Tăng 2 (Chia đều cho những người tham gia Tăng 2)
-        let shareT2 = selectedT2.length > 0 ? (tang2Bill / selectedT2.length) : 0;
+        const remainForSr = Math.max(0, totalBill - totalFixedMoney);
+        const perSrShare = srCount > 0 ? Math.round(remainForSr / srCount) : 0;
+        const perT2Share = (t2Count > 0 && tang2Bill > 0) ? Math.round(tang2Bill / t2Count) : 0;
 
         members.forEach((m, idx) => {
             const itemRow = document.getElementById(`item_${idx}`);
             if (!itemRow) return;
 
             const isParticipated = m.selected || m.selectedT2;
-
             if (currentRole === 'user' && !isParticipated) {
                 itemRow.style.display = 'none';
                 return;
             }
             itemRow.style.display = 'flex';
 
-            let payAmount = 0;
-
-            // Tính tiền Tăng 1 chính xác số lẻ
+            let t1Amount = 0;
             if (m.selected) {
-                if (m.customAmount !== undefined) payAmount += m.customAmount;
-                else if (m.role === 'ASM') payAmount += fixAsm;
-                else if (m.role === 'SS') payAmount += fixSs;
-                else payAmount += shareSR;
+                if (m.customAmount !== undefined) t1Amount = m.customAmount;
+                else if (m.role === 'ASM') t1Amount = fixAsm;
+                else if (m.role === 'SS') t1Amount = fixSs;
+                else t1Amount = perSrShare;
             }
 
-            // Cộng tiền Tăng 2
-            if (m.selectedT2) {
-                payAmount += shareT2;
-            }
+            let t2Amount = m.selectedT2 ? perT2Share : 0;
+            let finalAmount = t1Amount + t2Amount;
 
-            // Làm tròn theo số nguyên lẻ thực tế
-            payAmount = Math.round(payAmount);
+            document.getElementById(`amount_${idx}`).innerText = finalAmount.toLocaleString('vi-VN') + ' đ';
 
-            const amtDisplay = document.getElementById(`amount_${idx}`);
-            if (amtDisplay) amtDisplay.innerText = payAmount.toLocaleString('vi-VN') + ' đ';
-
-            const noteT2 = document.getElementById(`tang2Note_${idx}`);
-            if (noteT2) {
-                if (m.selectedT2 && shareT2 > 0) {
-                    noteT2.innerText = `(Gồm +${Math.round(shareT2).toLocaleString('vi-VN')}đ Tăng 2)`;
-                    noteT2.style.display = 'block';
+            const t2NoteElem = document.getElementById(`tang2Note_${idx}`);
+            if (t2NoteElem) {
+                if (t2Amount > 0) {
+                    t2NoteElem.style.display = 'block';
+                    t2NoteElem.innerText = `* +${t2Amount.toLocaleString('vi-VN')}đ (Tăng 2)`;
                 } else {
-                    noteT2.style.display = 'none';
+                    t2NoteElem.style.display = 'none';
                 }
             }
         });
     }
 
-    function rateParty(e) {
-        if (!e.target.classList.contains('star')) return;
-        const val = parseInt(e.target.getAttribute('data-val'));
-        currentRating = val;
-        const stars = document.querySelectorAll('.rating-stars .star');
-        stars.forEach((s, idx) => {
-            s.classList.toggle('active', idx < val);
-        });
+    function switchMode(role) {
+        if (role === 'admin' && currentRole !== 'admin') {
+            const pin = prompt("Vui lòng nhập mã PIN Admin:");
+            if (pin !== ADMIN_PIN) { alert("Mã PIN không chính xác!"); return; }
+        }
+
+        currentRole = role;
+        document.getElementById('modeUser').classList.toggle('active', role === 'user');
+        document.getElementById('modeAdmin').classList.toggle('active', role === 'admin');
+
+        const inputs = document.querySelectorAll('.admin-edit');
+        inputs.forEach(inp => inp.disabled = (role === 'user'));
+
+        document.getElementById('adminPanel').style.display = role === 'admin' ? 'block' : 'none';
+        document.getElementById('addGuestBox').style.display = role === 'admin' ? 'block' : 'none';
+        document.getElementById('noteInputRow').style.display = role === 'admin' ? 'flex' : 'none';
+        document.getElementById('tang2Row').style.display = role === 'admin' ? 'flex' : 'none';
+        document.getElementById('btnCalc').style.display = role === 'admin' ? 'block' : 'none';
+        document.getElementById('btnSaveSheets').style.display = role === 'admin' ? 'block' : 'none';
+
+        renderMembers();
     }
 
-    function toggleTag(elem) {
-        elem.classList.toggle('selected');
+    function rateParty(e) {
+        if (e.target.classList.contains('star')) {
+            currentRating = parseInt(e.target.getAttribute('data-val'));
+            document.querySelectorAll('.star').forEach(s => {
+                s.classList.toggle('active', parseInt(s.getAttribute('data-val')) <= currentRating);
+            });
+        }
     }
+
+    function toggleTag(el) { el.classList.toggle('selected'); }
 
     function sendFeedback() {
-        const reviewer = document.getElementById('reviewerName').value.trim() || 'Thành viên ẩn danh';
+        const name = document.getElementById('reviewerName').value.trim();
         const comment = document.getElementById('feedbackComment').value.trim();
-        const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected')).map(t => t.innerText.replace(/[^\w\sàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/gi, '').trim());
+        if (!name) { alert('Vui lòng nhập tên của bạn!'); return; }
 
-        const payload = {
-            action: 'sendFeedback',
-            date: document.getElementById('partyDate').value,
-            partyName: document.getElementById('partyName').value || 'Bữa nhậu Sales',
-            reviewer: reviewer,
-            rating: currentRating,
-            tags: selectedTags.join(', '),
-            comment: comment
-        };
+        const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected')).map(t => t.innerText).join(', ');
 
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(() => {
-            alert('Cảm ơn bạn đã gửi đóng góp ý kiến!');
-            document.getElementById('feedbackComment').value = '';
-        }).catch(() => {
-            alert('Đã gửi phản hồi thành công!');
+        const formData = new URLSearchParams();
+        formData.append('type', 'FEEDBACK');
+        formData.append('date', document.getElementById('partyDate').value);
+        formData.append('partyName', document.getElementById('partyName').value);
+        formData.append('location', document.getElementById('partyLocation').value);
+        formData.append('reviewer', name);
+        formData.append('stars', currentRating + ' sao');
+        formData.append('tags', selectedTags);
+        formData.append('comment', comment);
+
+        alert('Đang gửi đánh giá lên Google Sheets...');
+        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
+        .then(() => { alert(`Cảm ơn ${name} đã gửi ý kiến!`); document.getElementById('feedbackComment').value = ''; });
+    }
+
+    function buildCurrentShareUrl() {
+        const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
+        const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
+        const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
+        const totalBill = document.getElementById('totalBill').value || '0';
+        const tang2Bill = document.getElementById('tang2Bill').value || '0';
+        const fixAsm = document.getElementById('fixAsm').value || '';
+        const fixSs = document.getElementById('fixSs').value || '';
+        
+        let noteInput = document.getElementById('costNote').value.trim();
+        if (!noteInput) {
+            const noteTextElem = document.getElementById('noteText');
+            if (noteTextElem && noteTextElem.innerText !== "Chưa có ghi chú phát sinh.") {
+                noteInput = noteTextElem.innerText.trim();
+            }
+        }
+        const costNote = encodeURIComponent(noteInput);
+
+        let encodedMembers = [];
+        members.forEach((m, idx) => {
+            if (m.selected || m.selectedT2) {
+                let flags = [];
+                if (m.selected) flags.push('T1');
+                if (m.selectedT2) flags.push('T2');
+                const flagStr = flags.join('&');
+
+                let amtElem = document.getElementById(`amount_${idx}`);
+                let currentAmt = 0;
+                if (amtElem) {
+                    currentAmt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
+                }
+
+                if (m.isGuest) {
+                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${currentAmt}_${flagStr}`);
+                } else {
+                    encodedMembers.push(`${m.code}_${currentAmt}_${flagStr}`);
+                }
+            }
         });
+
+        const baseUrl = window.location.origin + window.location.pathname;
+        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&b2=${tang2Bill}&fasm=${fixAsm}&fss=${fixSs}&note=${costNote}&m=${encodedMembers.join(',')}`;
     }
 
     function copyWebLink() {
-        copyTextToClipboard(window.location.href).then(res => {
-            if (res) alert("Đã copy link ứng dụng! Hãy dán vào Zalo nhóm.");
-            else prompt("Copy link dưới đây:", window.location.href);
+        const shareUrl = buildCurrentShareUrl();
+        copyTextToClipboard(shareUrl).then(res => {
+            if (res) alert("Đã copy link bữa nhậu thành công!\nBạn có thể dán (Paste) để gửi ngay vào nhóm Zalo.");
+            else prompt("Sao chép link dưới đây:", shareUrl);
         });
     }
 
     function saveToGoogleSheets() {
-        const payload = {
-            action: 'saveParty',
-            date: document.getElementById('partyDate').value,
-            partyName: document.getElementById('partyName').value,
-            location: document.getElementById('partyLocation').value,
-            totalBill: document.getElementById('totalBill').value,
-            tang2Bill: document.getElementById('tang2Bill').value,
-            costNote: document.getElementById('costNote').value,
-            members: members
+        const partyName = document.getElementById('partyName').value.trim();
+        const partyDate = document.getElementById('partyDate').value;
+        const location = document.getElementById('partyLocation').value.trim();
+        const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+        const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
+        const costNote = document.getElementById('costNote').value.trim();
+
+        if (!partyName || !partyDate) { alert("Vui lòng nhập đầy đủ Tên bữa nhậu và Ngày nhậu!"); return; }
+
+        const selectedMembers = members.filter(m => m.selected || m.selectedT2).map(m => {
+            const amtText = document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ';
+            return { name: m.name, role: m.role, amount: parseFloat(amtText.replace(/[^0-9]/g, '')) || 0 };
+        });
+
+        const shareUrl = buildCurrentShareUrl();
+
+        const formData = new URLSearchParams();
+        formData.append('type', 'PARTY_SAVE');
+        formData.append('date', partyDate);
+        formData.append('partyName', partyName);
+        formData.append('location', location);
+        formData.append('totalBill', totalBill + tang2Bill);
+        formData.append('costNote', costNote);
+        formData.append('membersData', JSON.stringify(selectedMembers));
+        formData.append('shareUrl', shareUrl);
+
+        alert('Đang lưu thông tin bữa nhậu lên Google Sheets...');
+        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
+        .then(() => {
+            alert('Đã lưu thành công!');
+            savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
+        }).catch(err => alert('Lỗi khi lưu: ' + err));
+    }
+
+    function savePartyToLocalCache(name, date, loc, bill, note, membersArr, shareUrl) {
+        let historyList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
+        let partyId = `${name}_${date}`;
+        
+        let partyObj = {
+            id: partyId,
+            name: name,
+            date: date,
+            loc: loc || 'N/A',
+            bill: bill,
+            note: note,
+            shareUrl: shareUrl,
+            rows: membersArr.map(m => ({
+                'Tên người/NV': m.name,
+                'Chức danh': m.role,
+                'Số tiền': m.amount
+            }))
         };
 
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(() => {
-            alert('Đã lưu thông tin bữa nhậu lên Google Sheets!');
-        }).catch(err => {
-            alert('Lỗi khi kết nối Google Sheets: ' + err);
-        });
+        // Lọc bỏ các bản ghi trùng ID cũ để chống nhân bản
+        historyList = historyList.filter(p => p.id !== partyId);
+        historyList.unshift(partyObj);
+        
+        localStorage.setItem('party_history_extra', JSON.stringify(historyList));
+    }
+
+    function getCompleteDefaultHistory() {
+        return [
+            {
+                id: "Chốt Quý An Thuận Hưng_2026-09-18",
+                name: "Chốt Quý An Thuận Hưng",
+                date: "2026-09-18",
+                loc: "Quản Nhỏ Nguyễn Khánh",
+                bill: 4615000,
+                note: "Đã gồm: 200k bọ múa, 640k 4t ultra, 250k bánh trung thu",
+                rows: [
+                    { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 1400000 },
+                    { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                    { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                    { 'Tên người/NV': 'ĐỖ ĐÌNH BẢO', 'Chức danh': 'SR', 'Số tiền': 803750 },
+                    { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 803750 }
+                ]
+            },
+            {
+                id: "Chốt Q3'26_2026-09-11",
+                name: "Chốt Q3'26",
+                date: "2026-09-11",
+                loc: "Nướng bò tre Đông Anh",
+                bill: 3570000,
+                note: "Đã gồm 800k 4t Ultra250 Đạt Tình",
+                rows: [
+                    { 'Tên người/NV': 'HOÀNG CÔNG NHẬN', 'Chức danh': 'ASM', 'Số tiền': 600000 },
+                    { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 400000 },
+                    { 'Tên người/NV': 'LÝ HỒNG MINH', 'Chức danh': 'SS', 'Số tiền': 400000 },
+                    { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'NGUYỄN VĂN ĐẠT', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'NGUYỄN HỮU VINH', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'NGUYỄN HÀ NAM', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'CẨN TRUNG HIẾU', 'Chức danh': 'SR', 'Số tiền': 271250 },
+                    { 'Tên người/NV': 'NGUYỄN NGỌC LONG', 'Chức danh': 'SR', 'Số tiền': 271250 }
+                ]
+            }
+        ];
     }
 
     function openHistoryModal() {
-        document.getElementById('historyModal').style.display = 'flex';
-        const listDiv = document.getElementById('historyList');
+    const modal = document.getElementById('historyModal');
+    if (modal) modal.style.display = 'flex';
 
-        if (cachedHistory) {
-            renderHistoryList(cachedHistory);
-        } else {
-            listDiv.innerHTML = '<p style="text-align:center; padding:15px; font-size:13px;">⌛ Đang tải dữ liệu lịch sử...</p>';
-        }
+    const container = document.getElementById('historyList');
 
-        fetch(SCRIPT_URL + "?action=getHistory")
-            .then(res => res.json())
-            .then(data => {
-                cachedHistory = data;
-                renderHistoryList(data);
-            })
-            .catch(() => {
-                if (!cachedHistory) {
-                    listDiv.innerHTML = '<p style="text-align:center; color:red; padding:15px;">Lỗi tải dữ liệu lịch sử!</p>';
-                }
-            });
+    // Nếu đã có dữ liệu tải ngầm trước đó -> Render ngay lập tức!
+    if (cachedHistory) {
+        renderHistoryList(cachedHistory);
+        // Vẫn gọi ngầm để cập nhật mới nhất nếu có thay đổi
+        preloadHistory();
+        return;
     }
 
-    function renderHistoryList(data) {
-        const listDiv = document.getElementById('historyList');
-        if (!data || data.length === 0) {
-            listDiv.innerHTML = '<p style="text-align:center; padding:15px; font-size:13px;">Chưa có lịch sử bữa nhậu nào.</p>';
+    // Nếu bấm quá nhanh khi chưa kịp tải ngầm xong:
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">⏳ Đang tải dữ liệu từ Google Sheets...</div>';
+
+    fetch(SCRIPT_URL + "?action=getHistory")
+        .then(response => response.json())
+        .then(sheetData => {
+            cachedHistory = sheetData;
+            renderHistoryList(sheetData);
+        })
+        .catch(err => {
+            console.error("Lỗi lấy dữ liệu Sheet:", err);
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#cf1322;">❌ Lỗi kết nối Google Sheets! Vui lòng thử lại.</div>';
+        });
+}
+
+    function closeHistoryModal() {
+        const modal = document.getElementById('historyModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function renderHistoryList(list) {
+        const container = document.getElementById('historyList');
+        if (!list || list.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Chưa có lịch sử bữa nhậu nào.</div>';
             return;
         }
 
-        listDiv.innerHTML = '';
-        data.forEach((item) => {
-            const dateClean = cleanDateFormat(item.date);
+        container.innerHTML = '';
+        list.forEach((item) => {
+            const billNum = parseFloat(item.bill) || 0;
+            const billFormatted = billNum > 0 ? billNum.toLocaleString('vi-VN') + 'đ' : '0đ';
+            const safeKey = encodeURIComponent(item.id);
+
+            const targetUrl = item.selectedCodes || '';
+            const safeUrl = encodeURIComponent(targetUrl);
             const html = `
                 <div class="history-item">
                     <div class="history-header-row">
-                        <div class="history-title">🎉 ${item.partyName || 'Bữa nhậu'}</div>
-                        <span style="font-size:11px; font-weight:700; color:#16a34a;">${dateClean}</span>
+                        <div class="history-title">🎉 ${item.name}</div>
                     </div>
-                    <div class="history-info">📍 ${item.location || 'Nơi nhậu chưa ghi'}</div>
-                    <div class="history-info">💰 Tăng 1: <strong>${parseFloat(item.totalBill || 0).toLocaleString('vi-VN')}đ</strong> ${item.tang2Bill > 0 ? `| Tăng 2: <strong>${parseFloat(item.tang2Bill).toLocaleString('vi-VN')}đ</strong>` : ''}</div>
-                    <button class="btn-copy-item" onclick="loadHistoryItem('${item.id}')">📂 Xem Lại Bữa Nhậu Này</button>
+                    <div class="history-info">📅 Ngày: ${formatDisplayDate(item.date)} | 📍 Nơi: ${item.loc}</div>
+                    <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
+                    ${item.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${item.note}</div>` : ''}
+                    <button class="btn-copy-item" onclick="loadPartyFromUrl('${safeUrl}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
                 </div>
             `;
-            listDiv.innerHTML += html;
+            container.innerHTML += html;
         });
     }
 
-    function loadHistoryItem(id) {
-        if (!cachedHistory) return;
-        const match = cachedHistory.find(h => String(h.id) === String(id));
-        if (!match) return;
+    function loadPartyFromUrl(encodedUrl) {
+    const rawUrl = decodeURIComponent(encodedUrl);
+    if (!rawUrl) {
+        alert("Bữa nhậu này chưa có link dữ liệu chi tiết!");
+        return;
+    }
 
-        isHistoryMode = true;
+    try {
+        // Trích xuất phần tham số đằng sau dấu ? (query string)
+        const queryString = rawUrl.includes('?') ? rawUrl.split('?')[1] : rawUrl;
+        const urlParams = new URLSearchParams(queryString);
 
-        document.getElementById('partyDate').value = cleanDateFormat(match.date);
-        document.getElementById('partyName').value = match.partyName || '';
-        document.getElementById('partyLocation').value = match.location || '';
-        document.getElementById('totalBill').value = match.totalBill || 0;
-        document.getElementById('tang2Bill').value = match.tang2Bill || 0;
-        document.getElementById('costNote').value = match.costNote || '';
-        updateNoteDisplay();
+        // Đọc thông tin bữa nhậu từ link
+        const name = urlParams.get('name');
+        const date = urlParams.get('date');
+        const loc = urlParams.get('loc');
+        const bill = urlParams.get('bill');
+        const b2 = urlParams.get('b2');
+        const fasm = urlParams.get('fasm');
+        const fss = urlParams.get('fss');
+        const note = urlParams.get('note');
+        const mList = urlParams.get('m');
 
-        if (match.members && Array.isArray(match.members)) {
-            members = match.members;
+        // Gán lại dữ liệu vào các ô nhập thông tin
+        if (name) document.getElementById('partyName').value = decodeURIComponent(name);
+        if (date) document.getElementById('partyDate').value = cleanDateFormat(decodeURIComponent(date));
+        if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
+        if (bill) document.getElementById('totalBill').value = bill;
+        if (b2) document.getElementById('tang2Bill').value = b2;
+        if (fasm !== null) document.getElementById('fixAsm').value = fasm;
+        if (fss !== null) document.getElementById('fixSs').value = fss;
+        
+        if (note) {
+            document.getElementById('costNote').value = decodeURIComponent(note);
+            updateNoteDisplay();
+        }
+
+        // Khôi phục danh sách người đi nhậu và số tiền tương ứng
+        if (mList) {
+            isHistoryMode = true;
+            const codes = mList.split(',');
+            members = JSON.parse(JSON.stringify(defaultMembers));
+
+            codes.forEach(codeStr => {
+                let parts = codeStr.split('_');
+                let mainCode = parts[0];
+                let customVal = parts.length > 2 ? parseFloat(parts[1]) : 0;
+                let flags = parts[parts.length - 1];
+
+                let isT1 = flags.includes('T1') || !flags.includes('T2');
+                let isT2 = flags.includes('T2');
+
+                if (mainCode === 'G') {
+                    const gName = decodeURIComponent(parts[1]);
+                    const gRole = parts[2];
+                    members.push({
+                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
+                        name: gName,
+                        role: gRole,
+                        selected: isT1,
+                        selectedT2: isT2,
+                        isGuest: true,
+                        historyAmount: customVal
+                    });
+                } else {
+                    const m = members.find(x => x.code === mainCode);
+                    if (m) {
+                        m.selected = isT1;
+                        m.selectedT2 = isT2;
+                        m.historyAmount = customVal;
+                    }
+                }
+            });
         }
 
         renderMembers();
         closeHistoryModal();
+    } catch (err) {
+        console.error("Lỗi load dữ liệu:", err);
+        alert("Không thể tải lại chi tiết bữa nhậu này!");
+    }
+}
+    function initFromUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const name = urlParams.get('name');
+        const date = urlParams.get('date');
+        const loc = urlParams.get('loc');
+        const bill = urlParams.get('bill');
+        const b2 = urlParams.get('b2');
+        const fasm = urlParams.get('fasm');
+        const fss = urlParams.get('fss');
+        const note = urlParams.get('note');
+        const mList = urlParams.get('m');
+
+        if (name) {
+            let decodedName = decodeURIComponent(name);
+            document.getElementById('partyName').value = decodedName;
+            let decodedDate = cleanDateFormat(decodeURIComponent(date));
+            if (decodedDate) {
+                document.getElementById('partyDate').value = decodedDate;
+            }
+        }
+
+        if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
+        if (bill) document.getElementById('totalBill').value = bill;
+        if (b2) document.getElementById('tang2Bill').value = b2;
+        if (fasm !== null) document.getElementById('fixAsm').value = fasm;
+        if (fss !== null) document.getElementById('fixSs').value = fss;
+        if (note) {
+            document.getElementById('costNote').value = decodeURIComponent(note);
+            updateNoteDisplay();
+        }
+
+        if (mList) {
+            isHistoryMode = true;
+            const codes = mList.split(',');
+            members = JSON.parse(JSON.stringify(defaultMembers));
+            let loadedRows = [];
+
+            codes.forEach(codeStr => {
+                let parts = codeStr.split('_');
+                let mainCode = parts[0];
+                let customVal = parts.length > 2 ? parseFloat(parts[1]) : 0;
+                let flags = parts[parts.length - 1];
+
+                let isT1 = flags.includes('T1') || !flags.includes('T2');
+                let isT2 = flags.includes('T2');
+
+                if (mainCode === 'G') {
+                    const gName = decodeURIComponent(parts[1]);
+                    const gRole = parts[2];
+                    members.push({
+                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
+                        name: gName,
+                        role: gRole,
+                        selected: isT1,
+                        selectedT2: isT2,
+                        isGuest: true,
+                        historyAmount: customVal
+                    });
+                    loadedRows.push({ 'Tên người/NV': gName, 'Chức danh': gRole, 'Số tiền': customVal });
+                } else {
+                    const m = members.find(x => x.code === mainCode);
+                    if (m) {
+                        m.selected = isT1;
+                        m.selectedT2 = isT2;
+                        m.historyAmount = customVal;
+                        loadedRows.push({ 'Tên người/NV': m.name, 'Chức danh': m.role, 'Số tiền': customVal });
+                    }
+                }
+            });
+
+            if (name && date) {
+                let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
+                let partyId = `${decodeURIComponent(name)}_${cleanDateFormat(decodeURIComponent(date))}`;
+                
+                let partyObj = {
+                    id: partyId,
+                    name: decodeURIComponent(name),
+                    date: cleanDateFormat(decodeURIComponent(date)),
+                    loc: decodeURIComponent(loc || 'N/A'),
+                    bill: parseFloat(bill) || 0,
+                    note: decodeURIComponent(note || ''),
+                    rows: loadedRows
+                };
+
+                extraList = extraList.filter(p => p.id !== partyId);
+                extraList.unshift(partyObj);
+                localStorage.setItem('party_history_extra', JSON.stringify(extraList));
+            }
+        }
+        renderMembers();
     }
 
-    function closeHistoryModal() {
-        document.getElementById('historyModal').style.display = 'none';
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        initFromUrlParams();
+        if (!new URLSearchParams(window.location.search).get('name')) {
+            switchMode('user');
+        }
+    });
 </script>
-
 </body>
 </html>
