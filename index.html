@@ -811,22 +811,24 @@
     }
 
     function openHistoryModal() {
-        const modal = document.getElementById('historyModal');
-        if (modal) modal.style.display = 'flex';
+    const modal = document.getElementById('historyModal');
+    if (modal) modal.style.display = 'flex';
 
-        let savedLocal = getCompleteDefaultHistory();
-        let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-        
-        // Hợp nhất và loại bỏ các bản ghi trùng lặp ID hoàn toàn
-        let mapCombined = new Map();
-        [...extraList, ...savedLocal].forEach(item => {
-            if (!mapCombined.has(item.id)) {
-                mapCombined.set(item.id, item);
-            }
+    const container = document.getElementById('historyList');
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">⏳ Đang tải dữ liệu từ Google Sheets...</div>';
+
+    // Gọi API lấy dữ liệu thực tế từ Google Sheets
+    fetch(SCRIPT_URL + "?action=getHistory")
+        .then(response => response.json())
+        .then(sheetData => {
+            // Hiển thị trực tiếp dữ liệu từ Google Sheets trả về
+            renderHistoryList(sheetData);
+        })
+        .catch(err => {
+            console.error("Lỗi lấy dữ liệu Sheet:", err);
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#cf1322;">❌ Lỗi kết nối Google Sheets!</div>';
         });
-
-        renderHistoryList(Array.from(mapCombined.values()));
-    }
+}
 
     function closeHistoryModal() {
         const modal = document.getElementById('historyModal');
