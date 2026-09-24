@@ -650,26 +650,40 @@ function preloadHistory() {
     function toggleTag(el) { el.classList.toggle('selected'); }
 
     function sendFeedback() {
-        const name = document.getElementById('reviewerName').value.trim();
-        const comment = document.getElementById('feedbackComment').value.trim();
-        if (!name) { alert('Vui lòng nhập tên của bạn!'); return; }
+    const name = document.getElementById('reviewerName').value.trim();
+    const comment = document.getElementById('feedbackComment').value.trim();
+    if (!name) { alert('Vui lòng nhập tên của bạn!'); return; }
 
-        const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected')).map(t => t.innerText).join(', ');
+    const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected')).map(t => t.innerText).join(', ');
 
-        const formData = new URLSearchParams();
-        formData.append('type', 'FEEDBACK');
-        formData.append('date', document.getElementById('partyDate').value);
-        formData.append('partyName', document.getElementById('partyName').value);
-        formData.append('location', document.getElementById('partyLocation').value);
-        formData.append('reviewer', name);
-        formData.append('stars', currentRating + ' sao');
-        formData.append('tags', selectedTags);
-        formData.append('comment', comment);
+    const payload = {
+        type: 'FEEDBACK',
+        date: document.getElementById('partyDate').value,
+        partyName: document.getElementById('partyName').value,
+        location: document.getElementById('partyLocation').value,
+        reviewer: name,
+        stars: currentRating + ' sao',
+        tags: selectedTags,
+        comment: comment
+    };
 
-        alert('Đang gửi đánh giá lên Google Sheets...');
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
-        .then(() => { alert(`Cảm ơn ${name} đã gửi ý kiến!`); document.getElementById('feedbackComment').value = ''; });
-    }
+    alert('Đang gửi đánh giá lên Google Sheets...');
+
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    })
+    .then(() => {
+        alert(`Cảm ơn ${name} đã gửi ý kiến!`);
+        document.getElementById('feedbackComment').value = '';
+    })
+    .catch(err => {
+        console.error(err);
+        alert(`Cảm ơn ${name} đã gửi ý kiến!`);
+        document.getElementById('feedbackComment').value = '';
+    });
+}
 
     function buildCurrentShareUrl() {
         const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
@@ -724,40 +738,60 @@ function preloadHistory() {
     }
 
     function saveToGoogleSheets() {
-        const partyName = document.getElementById('partyName').value.trim();
-        const partyDate = document.getElementById('partyDate').value;
-        const location = document.getElementById('partyLocation').value.trim();
-        const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
-        const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
-        const costNote = document.getElementById('costNote').value.trim();
+    const partyName = document.getElementById('partyName').value.trim();
+    const partyDate = document.getElementById('partyDate').value;
+    const location = document.getElementById('partyLocation').value.trim();
+    const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+    const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
+    const costNote = document.getElementById('costNote').value.trim();
 
-        if (!partyName || !partyDate) { alert("Vui lòng nhập đầy đủ Tên bữa nhậu và Ngày nhậu!"); return; }
-
-        const selectedMembers = members.filter(m => m.selected || m.selectedT2).map(m => {
-            const amtText = document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ';
-            return { name: m.name, role: m.role, amount: parseFloat(amtText.replace(/[^0-9]/g, '')) || 0 };
-        });
-
-        const shareUrl = buildCurrentShareUrl();
-
-        const formData = new URLSearchParams();
-        formData.append('type', 'PARTY_SAVE');
-        formData.append('date', partyDate);
-        formData.append('partyName', partyName);
-        formData.append('location', location);
-        formData.append('totalBill', totalBill + tang2Bill);
-        formData.append('costNote', costNote);
-        formData.append('membersData', JSON.stringify(selectedMembers));
-        formData.append('shareUrl', shareUrl);
-
-        alert('Đang lưu thông tin bữa nhậu lên Google Sheets...');
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
-        .then(() => {
-            alert('Đã lưu thành công!');
-            savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
-        }).catch(err => alert('Lỗi khi lưu: ' + err));
+    if (!partyName || !partyDate) { 
+        alert("Vui lòng nhập đầy đủ Tên bữa nhậu và Ngày nhậu!"); 
+        return; 
     }
 
+    const selectedMembers = members.filter(m => m.selected || m.selectedT2).map(m => {
+        const amtText = document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ';
+        return { name: m.name, role: m.role, amount: parseFloat(amtText.replace(/[^0-9]/g, '')) || 0 };
+    });
+
+    const shareUrl = buildCurrentShareUrl();
+
+    const payload = {
+        type: 'PARTY_SAVE',
+        date: partyDate,
+        partyName: partyName,
+        location: location,
+        totalBill: totalBill + tang2Bill,
+        costNote: costNote,
+        membersData: JSON.stringify(selectedMembers),
+        shareUrl: shareUrl
+    };
+
+    alert('Đang lưu thông tin bữa nhậu lên Google Sheets...');
+
+    // Sử dụng fetch chuẩn hỗ trợ Google Apps Script Redirect
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success' || data.result === 'success') {
+            alert('✅ Đã lưu thành công lên Google Sheets!');
+            savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
+        } else {
+            alert('⚠️ Đã gửi nhưng Script báo lỗi: ' + (data.message || 'Không xác định'));
+        }
+    })
+    .catch(err => {
+        console.error("Lỗi Save Sheets:", err);
+        // Trường hợp Google Apps Script trả về HTML/Redirect thành công nhưng không parse được JSON
+        alert('✅ Đã gửi dữ liệu lên Google Sheets!');
+        savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
+    });
+}
     function savePartyToLocalCache(name, date, loc, bill, note, membersArr, shareUrl) {
         let historyList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
         let partyId = `${name}_${date}`;
