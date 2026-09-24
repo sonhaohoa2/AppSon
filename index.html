@@ -933,6 +933,7 @@ function loadLocalHistory() {
 }
 
 // 3. Render danh sách bữa nhậu ra giao diện
+// 1. Hàm render danh sách Lịch Sử (Đã gộp bữa & Có nút Xem chi tiết)
 function renderHistoryList(list) {
     const container = document.getElementById('historyList');
     if (!container) return;
@@ -947,29 +948,71 @@ function renderHistoryList(list) {
     }
 
     let html = '';
-    list.forEach((item) => {
+    list.forEach((item, index) => {
         let name = item.name || item.partyName || 'Bữa nhậu';
         let date = item.date ? (typeof formatDisplayDate === 'function' ? formatDisplayDate(item.date) : item.date) : '---';
         let loc = item.loc || item.location || 'Chưa cập nhật';
         let billVal = item.bill || item.totalBill || 0;
         let bill = Number(billVal) ? Number(billVal).toLocaleString('vi-VN') + ' đ' : billVal + ' đ';
+        let members = item.members || item.rows || item.membersData || [];
+        let detailsId = 'history_detail_' + index;
+
+        // Render từng thành viên đóng góp
+        let memberRowsHtml = '';
+        if (members.length > 0) {
+            memberRowsHtml = members.map(m => {
+                let mName = m.name || m['Tên người/NV'] || 'Thành viên';
+                let mRole = m.role || m['Chức danh'] || '';
+                let mAmt = m.amount || m['Số tiền'] || 0;
+                let fmtAmt = Number(mAmt) ? Number(mAmt).toLocaleString('vi-VN') + ' đ' : mAmt;
+                return `
+                    <div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #e2e8f0; font-size:12px;">
+                        <span>👤 <b>${mName}</b> ${mRole ? `<small style="color:#64748b;">(${mRole})</small>` : ''}</span>
+                        <span style="color:#2563eb; font-weight:600;">${fmtAmt}</span>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            memberRowsHtml = '<div style="font-size:12px; color:#94a3b8;">Không có danh sách chi tiết</div>';
+        }
 
         html += `
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:10px; text-align:left;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                    <strong style="color:#0f172a; font-size:14px;">🍻 ${name}</strong>
+            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:12px 14px; margin-bottom:12px; text-align:left; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <strong style="color:#0f172a; font-size:15px;">🍻 ${name}</strong>
                     <span style="background:#e0f2fe; color:#0369a1; font-size:11px; padding:2px 8px; border-radius:10px; font-weight:600;">${date}</span>
                 </div>
-                <div style="font-size:12px; color:#475569; line-height:1.6;">
+                
+                <div style="font-size:13px; color:#475569; line-height:1.6;">
                     <div>📍 <b>Địa điểm:</b> ${loc}</div>
-                    <div>💰 <b>Tổng tiền:</b> <span style="color:#dc2626; font-weight:bold;">${bill}</span></div>
+                    <div>💰 <b>Tổng tiền:</b> <span style="color:#dc2626; font-weight:bold;">${bill}</span> (${members.length} người)</div>
                     ${item.note ? `<div>📝 <b>Ghi chú:</b> ${item.note}</div>` : ''}
+                </div>
+
+                <!-- Khung chi tiết từng người (ẩn/hện) -->
+                <div id="${detailsId}" style="display:none; margin-top:10px; padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+                    <div style="font-weight:bold; font-size:12px; margin-bottom:6px; color:#334155;">📋 CHI TIẾT THÀNH VIÊN & SỐ TIỀN:</div>
+                    ${memberRowsHtml}
+                </div>
+
+                <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:8px;">
+                    <button onclick="toggleHistoryDetail('${detailsId}')" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">
+                        👁️ Xem chi tiết người đi
+                    </button>
                 </div>
             </div>
         `;
     });
 
     container.innerHTML = html;
+}
+
+// 2. Hàm bật/tắt khung chi tiết từng bữa
+function toggleHistoryDetail(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+    }
 }
 
 // 4. Đóng Modal
