@@ -262,14 +262,73 @@
 <script>
     const ADMIN_PIN = "3979"; 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmebv3cT-y3rM5MASxH3SY_09FPDutRY1NLfVpf_b7aHyAOlDVPUTd9NRIygtTSWqz/exec"; 
+    const HISTORY_CACHE_KEY = 'party_history_cache_v1';
+    let cachedHistory = null;
+    let historyLoading = false;
+    let historyWaiters = [];
 
-    let cachedHistory = null; // Lưu dữ liệu lịch sử tải ngầm
+    try { cachedHistory = JSON.parse(localStorage.getItem(HISTORY_CACHE_KEY) || 'null'); } catch (e) {}
 
-// Tải ngầm ngay khi app vừa load xong
-document.addEventListener('DOMContentLoaded', () => {
-    preloadHistory();
-});
+    function fetchHistoryJsonp(onDone, onFail) {
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    const script = document.createElement('script');
+    let finished = false;
 
+    const timer = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+        window[cbName] = function () {};   // nếu đến trễ thì bỏ qua
+        script.remove();
+        onFail();
+    }, 20000);
+
+    window[cbName] = function (data) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        delete window[cbName];
+        script.remove();
+        onDone(data);
+    };
+
+    script.onerror = function () {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        delete window[cbName];
+        script.remove();
+        onFail();
+    };
+
+    script.src = `${SCRIPT_URL}?action=getHistory&callback=${cbName}&_=${Date.now()}`;
+    document.body.appendChild(script);
+    }
+
+function loadHistory(cb) {
+    if (cb) historyWaiters.push(cb);
+    if (historyLoading) return;
+    historyLoading = true;
+
+    const flush = (data) => {
+        historyLoading = false;
+        const waiters = historyWaiters;
+        historyWaiters = [];
+        waiters.forEach(f => f(data));
+    };
+
+    fetchHistoryJsonp(
+        (data) => {
+            cachedHistory = data;
+            try { localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+            flush(data);
+        },
+        () => flush(null)
+    );
+}
+
+// Tải ngầm ngay khi mở app
+document.addEventListener('DOMContentLoaded', () => { loadHistory(); });
+    
 function preloadHistory() {
     fetch(SCRIPT_URL + "?action=getHistory")
         .then(response => response.json())
@@ -789,6 +848,7 @@ function preloadHistory() {
         .then(() => {
             alert('✅ Đã gửi dữ liệu thành công lên Google Sheets!');
             savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
+            setTimeout(() => loadHistory(), 3000);
         })
         .catch(err => {
             alert('❌ Có lỗi xảy ra khi kết nối tới Server!');
@@ -873,18 +933,27 @@ function openHistoryModal() {
     const container = document.getElementById('historyList');
     if (!container) return;
 
-    container.innerHTML = '<div style="text-align:center; padding:25px; color:#64748b; font-size:14px;">⏳ Đang đồng bộ lịch sử từ Google Sheets...</div>';
+    // Có dữ liệu sẵn thì hiện ngay
+    let shown = null;
+    if (cachedHistory) {
+        shown = JSON.stringify(cachedHistory);
+        renderHistoryList(cachedHistory);
+    } else {
+        container.innerHTML = '<div style="text-align:center; padding:25px; color:#64748b; font-size:14px;">⏳ Đang đồng bộ lịch sử từ Google Sheets...<br><small>Lần đầu có thể mất vài giây</small></div>';
+    }
 
-    let isFinished = false;
-    const callbackName = 'cb_' + Date.now();
-
-    window[callbackName] = function(data) {
-        if (isFinished) return;
-        isFinished = true;
-        clearScript();
-        renderHistoryList(data);
-    };
-
+    // Cập nhật ngầm, chỉ vẽ lại nếu dữ liệu có thay đổi
+    loadHistory((data) => {
+        if (modal.style.display === 'none') return;
+        if (!data) {
+            if (!cachedHistory) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">❌ Kết nối chậm, vui lòng thử lại!<br><button onclick="openHistoryModal()" style="margin-top:10px; padding:6px 14px; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer;">Thử lại</button></div>';
+            }
+            return;
+        }
+        if (JSON.stringify(data) !== shown) renderHistoryList(data);
+    });
+}
     function clearScript() {
         delete window[callbackName];
         const oldScript = document.getElementById('jsonp_temp_script');
