@@ -799,6 +799,10 @@ function preloadHistory() {
     }
 
     function copyWebLink() {
+        if (!document.getElementById('partyName').value.trim()) {
+        alert('Hãy mở một bữa từ "Xem Lịch Sử" (nút 📂 Mở bữa này) rồi mới copy link!');
+        return;
+        }
         const shareUrl = buildCurrentShareUrl();
         copyTextToClipboard(shareUrl).then(res => {
             if (res) alert("Đã copy link bữa nhậu thành công!\nBạn có thể dán (Paste) để gửi ngay vào nhóm Zalo.");
@@ -958,6 +962,7 @@ function openHistoryModal() {
 function renderHistoryList(list) {
     const container = document.getElementById('historyList');
     if (!container) return;
+    window.currentHistoryList = list || [];
 
     if (!list || list.length === 0) {
         container.innerHTML = `
@@ -1012,10 +1017,10 @@ function renderHistoryList(list) {
                     ${memberRowsHtml}
                 </div>
 
-                <div style="margin-top:10px; text-align:right;">
-                    <button onclick="toggleHistoryDetail('${detailsId}')" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">
-                        👁️ Xem chi tiết người đi
-                    </button>
+                <div style="margin-top:10px; display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                    <button onclick="toggleHistoryDetail('${detailsId}')" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">👁️ Chi tiết</button>
+                    <button onclick="openHistoryParty(${index})" style="background:#002d72; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">📂 Mở bữa này</button>
+                    <button onclick="copyHistoryLink(${index})" style="background:#16a34a; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">🔗 Copy link</button>
                 </div>
             </div>
         `;
@@ -1030,7 +1035,36 @@ function toggleHistoryDetail(elementId) {
         el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
     }
 }
+function buildShareUrlFromHistory(item) {
+    if (item.shareUrl) return item.shareUrl;
+    const enc = encodeURIComponent;
+    const base = window.location.origin + window.location.pathname;
+    const parts = (item.members || []).map(m => {
+        const amt = parseFloat(String(m.amount).replace(/[^0-9]/g, '')) || 0;
+        const found = defaultMembers.find(d => d.name === String(m.name).trim().toUpperCase());
+        if (found) return `${found.code}_${amt}_T1`;
+        return `G_${enc(m.name)}_${m.role || 'SR'}_${amt}_T1`;
+    });
+    const bill = parseFloat(String(item.bill).replace(/[^0-9]/g, '')) || 0;
+    return `${base}?name=${enc(item.name || '')}&date=${enc(item.date || '')}&loc=${enc(item.loc || '')}&bill=${bill}&b2=0&fasm=&fss=&note=${enc(item.note || '')}&m=${parts.join(',')}`;
+}
 
+function openHistoryParty(i) {
+    const item = (window.currentHistoryList || [])[i];
+    if (!item) return;
+    window.location.href = buildShareUrlFromHistory(item);
+}
+
+function copyHistoryLink(i) {
+    const item = (window.currentHistoryList || [])[i];
+    if (!item) return;
+    const url = buildShareUrlFromHistory(item);
+    copyTextToClipboard(url).then(ok => {
+        if (ok) alert('Đã copy link bữa "' + item.name + '"!\nDán vào Zalo để gửi mọi người.');
+        else prompt('Sao chép link dưới đây:', url);
+    });
+}
+    
 function closeHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) modal.style.display = 'none';
