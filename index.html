@@ -778,7 +778,7 @@ function preloadHistory() {
                 let flags = [];
                 if (m.selected) flags.push('T1');
                 if (m.selectedT2) flags.push('T2');
-                const flagStr = flags.join('&');
+                const flagStr = flags.join('-');
 
                 let amtElem = document.getElementById(`amount_${idx}`);
                 let currentAmt = 0;
@@ -958,7 +958,28 @@ function openHistoryModal() {
         if (JSON.stringify(data) !== shown) renderHistoryList(data);
     });
 }
-
+function parseShareInfo(url) {
+    const info = { b2: 0, t2Names: [] };
+    if (!url) return info;
+    url = fixShareUrl(url);
+    try {
+        const qs = url.includes('?') ? url.split('?')[1] : url;
+        const p = new URLSearchParams(qs);
+        info.b2 = parseFloat(p.get('b2')) || 0;
+        (p.get('m') || '').split(',').forEach(s => {
+            const parts = s.split('_');
+            if (!parts[parts.length - 1].includes('T2')) return;
+            if (parts[0] === 'G') {
+                info.t2Names.push(decodeURIComponent(parts[1]).toUpperCase());
+            } else {
+                const f = defaultMembers.find(d => d.code === parts[0]);
+                if (f) info.t2Names.push(f.name);
+            }
+        });
+    } catch (e) {}
+    return info;
+}
+    
 function renderHistoryList(list) {
     const container = document.getElementById('historyList');
     if (!container) return;
@@ -1035,8 +1056,11 @@ function toggleHistoryDetail(elementId) {
         el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
     }
 }
+function fixShareUrl(url) {
+    return String(url || '').replace(/&T2/g, '-T2');
+}
 function buildShareUrlFromHistory(item) {
-    if (item.shareUrl) return item.shareUrl;
+    if (item.shareUrl) return fixShareUrl(item.shareUrl);
     const enc = encodeURIComponent;
     const base = window.location.origin + window.location.pathname;
     const parts = (item.members || []).map(m => {
@@ -1149,7 +1173,7 @@ function loadPartyFromUrl(encodedUrl) {
     }
 }
     function initFromUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams(window.location.search.replace(/&T2/g, '-T2'));
         const name = urlParams.get('name');
         const date = urlParams.get('date');
         const loc = urlParams.get('loc');
