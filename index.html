@@ -1,3 +1,18 @@
+let cachedHistory = null; // Lưu dữ liệu lịch sử tải ngầm
+
+// Tải ngầm ngay khi app vừa load xong
+document.addEventListener('DOMContentLoaded', () => {
+    preloadHistory();
+});
+
+function preloadHistory() {
+    fetch(SCRIPT_URL + "?action=getHistory")
+        .then(response => response.json())
+        .then(data => {
+            cachedHistory = data;
+        })
+        .catch(err => console.log("Tải ngầm lịch sử chưa xong hoặc lỗi:", err));
+}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -815,18 +830,27 @@
     if (modal) modal.style.display = 'flex';
 
     const container = document.getElementById('historyList');
+
+    // Nếu đã có dữ liệu tải ngầm trước đó -> Render ngay lập tức!
+    if (cachedHistory) {
+        renderHistoryList(cachedHistory);
+        // Vẫn gọi ngầm để cập nhật mới nhất nếu có thay đổi
+        preloadHistory();
+        return;
+    }
+
+    // Nếu bấm quá nhanh khi chưa kịp tải ngầm xong:
     container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">⏳ Đang tải dữ liệu từ Google Sheets...</div>';
 
-    // Gọi API lấy dữ liệu thực tế từ Google Sheets
     fetch(SCRIPT_URL + "?action=getHistory")
         .then(response => response.json())
         .then(sheetData => {
-            // Hiển thị trực tiếp dữ liệu từ Google Sheets trả về
+            cachedHistory = sheetData;
             renderHistoryList(sheetData);
         })
         .catch(err => {
             console.error("Lỗi lấy dữ liệu Sheet:", err);
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:#cf1322;">❌ Lỗi kết nối Google Sheets!</div>';
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#cf1322;">❌ Lỗi kết nối Google Sheets! Vui lòng thử lại.</div>';
         });
 }
 
@@ -855,7 +879,7 @@
                     <div class="history-header-row">
                         <div class="history-title">🎉 ${item.name}</div>
                     </div>
-                    <div class="history-info">📅 Ngày: ${item.date} | 📍 Nơi: ${item.loc}</div>
+                    <div class="history-info">📅 Ngày: ${formatDisplayDate(item.date)} | 📍 Nơi: ${item.loc}</div>
                     <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
                     ${item.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${item.note}</div>` : ''}
                     <button class="btn-copy-item" onclick="loadPartyFromUrl('${safeUrl}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
