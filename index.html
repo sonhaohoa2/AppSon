@@ -858,7 +858,7 @@ function preloadHistory() {
         ];
     }
 
-    // Hàm mở Modal và load dữ liệu bằng JSONP chống CORS
+    // 1. Hàm mở Modal Lịch Sử (JSONP - Tự hủy sau 3s nếu kẹt)
 function openHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) modal.style.display = 'flex';
@@ -866,17 +866,16 @@ function openHistoryModal() {
     const container = document.getElementById('historyList');
     if (!container) return;
 
-    container.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b; font-size:14px;">⏳ Đang tải dữ liệu từ Google Sheets...</div>';
+    container.innerHTML = '<div style="text-align:center; padding:25px; color:#64748b; font-size:14px;">⏳ Đang lấy dữ liệu từ Google Sheets...</div>';
 
-    // Tạo tên callback ngẫu nhiên
-    const callbackName = 'handleHistoryData_' + Math.floor(Math.random() * 100000);
+    let isDone = false;
+    const callbackName = 'cb_' + Date.now();
 
-    // Tạo hàm Callback hứng dữ liệu trả về
+    // Hứng dữ liệu trả về từ Google Sheets
     window[callbackName] = function(data) {
-        delete window[callbackName];
-        const oldScript = document.getElementById('jsonp_history_script');
-        if (oldScript) oldScript.remove();
-
+        if (isDone) return;
+        isDone = true;
+        cleanup();
         if (Array.isArray(data) && data.length > 0) {
             renderHistoryList(data);
         } else {
@@ -884,35 +883,37 @@ function openHistoryModal() {
         }
     };
 
-    // Bắt lỗi nếu timeout / mất kết nối
-    const timeoutTimer = setTimeout(() => {
-        if (window[callbackName]) {
-            delete window[callbackName];
-            const oldScript = document.getElementById('jsonp_history_script');
-            if (oldScript) oldScript.remove();
-            console.warn("Lấy lịch sử quá lâu, fallback về Local Cache.");
+    function cleanup() {
+        delete window[callbackName];
+        const el = document.getElementById('jsonp_script_temp');
+        if (el) el.remove();
+    }
+
+    // Nếu Google phản hồi lâu hơn 3 giây -> Ngắt và hiện bản lưu dưới máy
+    setTimeout(() => {
+        if (!isDone) {
+            isDone = true;
+            cleanup();
+            console.warn("Chuyển sang bản lưu dưới máy do Google phản hồi chậm.");
             loadLocalHistory();
         }
-    }, 5000);
+    }, 3000);
 
-    // Chèn thẻ Script động gửi request JSONP
-    const oldScript = document.getElementById('jsonp_history_script');
-    if (oldScript) oldScript.remove();
-
+    // Gửi Yêu Cầu lấy dữ liệu
     const script = document.createElement('script');
-    script.id = 'jsonp_history_script';
-    script.src = `${SCRIPT_URL}?callback=${callbackName}&_=${new Date().getTime()}`;
+    script.id = 'jsonp_script_temp';
+    script.src = `${SCRIPT_URL}?action=getHistory&callback=${callbackName}&_=${Date.now()}`;
     script.onerror = function() {
-        clearTimeout(timeoutTimer);
-        delete window[callbackName];
-        script.remove();
-        loadLocalHistory();
+        if (!isDone) {
+            isDone = true;
+            cleanup();
+            loadLocalHistory();
+        }
     };
-
     document.body.appendChild(script);
 }
 
-// Hàm tải lịch sử máy local
+// 2. Hàm tải lịch sử lưu dưới máy (Local Cache)
 function loadLocalHistory() {
     let localHistory = [];
     try {
@@ -925,7 +926,7 @@ function loadLocalHistory() {
     renderHistoryList(localHistory);
 }
 
-// Hàm render giao diện danh sách
+// 3. Hàm Render danh sách Lịch Sử ra giao diện
 function renderHistoryList(list) {
     const container = document.getElementById('historyList');
     if (!container) return;
@@ -933,7 +934,7 @@ function renderHistoryList(list) {
     if (!list || list.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; padding:30px; color:#94a3b8;">
-                <p style="font-size:16px; margin-bottom:5px;">📭 Chưa có lịch sử bữa nhậu nào</p>
+                <p style="font-size:16px; margin-bottom:5px; font-weight:bold;">📭 Chưa có lịch sử bữa nhậu nào</p>
                 <span style="font-size:12px;">Hãy tạo bữa nhậu mới và bấm "Lưu Google Sheets" nhé!</span>
             </div>`;
         return;
@@ -944,6 +945,7 @@ function renderHistoryList(list) {
         let displayDate = item.date ? formatDisplayDate(item.date) : 'N/A';
         let totalBill = item.bill ? Number(item.bill).toLocaleString('vi-VN') + ' đ' : (item.totalBill ? Number(item.totalBill).toLocaleString('vi-VN') + ' đ' : '0 đ');
         let memberCount = item.rows ? item.rows.length : (item.membersData ? item.membersData.length : 0);
+        let rawShareUrl = item.shareUrl || item.url || '';
 
         html += `
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 15px; margin-bottom:12px; text-align:left;">
@@ -956,66 +958,10 @@ function renderHistoryList(list) {
                     <div>💰 <b>Tổng tiền:</b> <span style="color:#dc2626; font-weight:bold;">${totalBill}</span> (${memberCount} người)</div>
                     ${(item.note || item.costNote) ? `<div>📝 <b>Ghi chú:</b> ${item.note || item.costNote}</div>` : ''}
                 </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
-}
-
-function closeHistoryModal() {
-    const modal = document.getElementById('historyModal');
-    if (modal) modal.style.display = 'none';
-}
-
-    function loadLocalHistory() {
-    let localHistory = [];
-    try {
-        localHistory = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-    } catch(e) { localHistory = []; }
-
-    if (localHistory.length === 0 && typeof getCompleteDefaultHistory === 'function') {
-        localHistory = getCompleteDefaultHistory();
-    }
-    renderHistoryList(localHistory);
-}
-    // 3. Hàm đóng Modal
-function closeHistoryModal() {
-    const modal = document.getElementById('historyModal');
-    if (modal) modal.style.display = 'none';
-}
-
-    // 3. Hàm Render danh sách Lịch Sử
-function renderHistoryList(list) {
-    const container = document.getElementById('historyList');
-    if (!container) return;
-
-    if (!list || list.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center; padding:30px; color:#94a3b8;">
-                <p style="font-size:16px; margin-bottom:5px;">📭 Chưa có lịch sử bữa nhậu nào</p>
-                <span style="font-size:12px;">Hãy tạo bữa nhậu mới và bấm "Lưu Google Sheets" nhé!</span>
-            </div>`;
-        return;
-    }
-
-    let html = '';
-    list.forEach((item) => {
-        let displayDate = item.date ? formatDisplayDate(item.date) : 'N/A';
-        let totalBill = item.bill ? Number(item.bill).toLocaleString('vi-VN') + ' đ' : (item.totalBill ? Number(item.totalBill).toLocaleString('vi-VN') + ' đ' : '0 đ');
-        let memberCount = item.rows ? item.rows.length : (item.membersData ? item.membersData.length : 0);
-
-        html += `
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 15px; margin-bottom:12px; text-align:left;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <strong style="color:#1e293b; font-size:15px;">🍻 ${item.name || item.partyName || 'Bữa nhậu'}</strong>
-                    <span style="background:#e0f2fe; color:#0369a1; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">${displayDate}</span>
-                </div>
-                <div style="font-size:13px; color:#475569; line-height:1.5;">
-                    <div>📍 <b>Địa điểm:</b> ${item.loc || item.location || 'Chưa cập nhật'}</div>
-                    <div>💰 <b>Tổng tiền:</b> <span style="color:#dc2626; font-weight:bold;">${totalBill}</span> (${memberCount} người)</div>
-                    ${(item.note || item.costNote) ? `<div>📝 <b>Ghi chú:</b> ${item.note || item.costNote}</div>` : ''}
-                </div>
+                ${rawShareUrl ? `
+                <div style="margin-top:8px; text-align:right;">
+                    <button onclick="loadPartyFromUrl('${encodeURIComponent(rawShareUrl)}')" style="background:#2563eb; color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">📂 Xem lại chi tiết</button>
+                </div>` : ''}
             </div>
         `;
     });
@@ -1029,7 +975,8 @@ function closeHistoryModal() {
     if (modal) modal.style.display = 'none';
 }
 
-    function loadPartyFromUrl(encodedUrl) {
+// 5. Hàm tải thông tin bữa nhậu từ Link
+function loadPartyFromUrl(encodedUrl) {
     const rawUrl = decodeURIComponent(encodedUrl);
     if (!rawUrl) {
         alert("Bữa nhậu này chưa có link dữ liệu chi tiết!");
@@ -1037,11 +984,9 @@ function closeHistoryModal() {
     }
 
     try {
-        // Trích xuất phần tham số đằng sau dấu ? (query string)
         const queryString = rawUrl.includes('?') ? rawUrl.split('?')[1] : rawUrl;
         const urlParams = new URLSearchParams(queryString);
 
-        // Đọc thông tin bữa nhậu từ link
         const name = urlParams.get('name');
         const date = urlParams.get('date');
         const loc = urlParams.get('loc');
@@ -1052,22 +997,20 @@ function closeHistoryModal() {
         const note = urlParams.get('note');
         const mList = urlParams.get('m');
 
-        // Gán lại dữ liệu vào các ô nhập thông tin
         if (name) document.getElementById('partyName').value = decodeURIComponent(name);
-        if (date) document.getElementById('partyDate').value = cleanDateFormat(decodeURIComponent(date));
+        if (date) document.getElementById('partyDate').value = typeof cleanDateFormat === 'function' ? cleanDateFormat(decodeURIComponent(date)) : decodeURIComponent(date);
         if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
         if (bill) document.getElementById('totalBill').value = bill;
         if (b2) document.getElementById('tang2Bill').value = b2;
-        if (fasm !== null) document.getElementById('fixAsm').value = fasm;
-        if (fss !== null) document.getElementById('fixSs').value = fss;
+        if (fasm !== null && document.getElementById('fixAsm')) document.getElementById('fixAsm').value = fasm;
+        if (fss !== null && document.getElementById('fixSs')) document.getElementById('fixSs').value = fss;
         
         if (note) {
             document.getElementById('costNote').value = decodeURIComponent(note);
-            updateNoteDisplay();
+            if (typeof updateNoteDisplay === 'function') updateNoteDisplay();
         }
 
-        // Khôi phục danh sách người đi nhậu và số tiền tương ứng
-        if (mList) {
+        if (mList && typeof defaultMembers !== 'undefined') {
             isHistoryMode = true;
             const codes = mList.split(',');
             members = JSON.parse(JSON.stringify(defaultMembers));
@@ -1104,7 +1047,7 @@ function closeHistoryModal() {
             });
         }
 
-        renderMembers();
+        if (typeof renderMembers === 'function') renderMembers();
         closeHistoryModal();
     } catch (err) {
         console.error("Lỗi load dữ liệu:", err);
