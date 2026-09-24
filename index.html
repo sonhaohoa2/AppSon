@@ -954,32 +954,6 @@ function openHistoryModal() {
         if (JSON.stringify(data) !== shown) renderHistoryList(data);
     });
 }
-    function clearScript() {
-        delete window[callbackName];
-        const oldScript = document.getElementById('jsonp_temp_script');
-        if (oldScript) oldScript.remove();
-    }
-
-    setTimeout(() => {
-        if (!isFinished) {
-            isFinished = true;
-            clearScript();
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">❌ Kết nối chậm, vui lòng thử lại!</div>';
-        }
-    }, 10000);
-
-    const script = document.createElement('script');
-    script.id = 'jsonp_temp_script';
-    script.src = `${SCRIPT_URL}?action=getHistory&callback=${callbackName}&_=${Date.now()}`;
-    script.onerror = function() {
-        if (!isFinished) {
-            isFinished = true;
-            clearScript();
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">❌ Lỗi tải dữ liệu. Vui lòng thử lại!</div>';
-        }
-    };
-    document.body.appendChild(script);
-}
 
 function renderHistoryList(list) {
     const container = document.getElementById('historyList');
