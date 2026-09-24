@@ -408,6 +408,10 @@ function preloadHistory() {
         calculateMoney();
     }
 
+    function refreshTang2Row() {
+        const b2 = parseFloat(document.getElementById('tang2Bill').value) || 0;
+        document.getElementById('tang2Row').style.display = (currentRole === 'admin' || b2 > 0) ? 'flex' : 'none';
+    }
     function renderMembers() {
         const container = document.getElementById('memberList');
         container.innerHTML = '';
@@ -450,10 +454,15 @@ function preloadHistory() {
         } else {
             calculateMoney();
         }
+        refreshTang2Row();
     }
 
-    function updateDisplayFromHistoryData() {
+        function updateDisplayFromHistoryData() {
         let selectedCount = 0;
+        const b2 = parseFloat(document.getElementById('tang2Bill').value) || 0;
+        const t2Count = members.filter(x => x.selectedT2).length;
+        const perT2 = (b2 > 0 && t2Count > 0) ? Math.round(b2 / t2Count) : 0;
+
         members.forEach((m, idx) => {
             const itemRow = document.getElementById(`item_${idx}`);
             if (!itemRow) return;
@@ -468,7 +477,18 @@ function preloadHistory() {
             itemRow.style.display = 'flex';
 
             let displayMoney = m.historyAmount !== undefined ? m.historyAmount : 0;
+            if (!isFinite(displayMoney)) displayMoney = 0;
             document.getElementById(`amount_${idx}`).innerText = displayMoney.toLocaleString('vi-VN') + ' đ';
+
+            const t2NoteElem = document.getElementById(`tang2Note_${idx}`);
+            if (t2NoteElem) {
+                if (m.selectedT2 && perT2 > 0) {
+                    t2NoteElem.style.display = 'block';
+                    t2NoteElem.innerText = `* +${perT2.toLocaleString('vi-VN')}đ (Tăng 2)`;
+                } else {
+                    t2NoteElem.style.display = 'none';
+                }
+            }
         });
 
         document.getElementById('countParticipate').innerText = `(${selectedCount}/${members.length} ĐI NHẬU)`;
@@ -1136,7 +1156,7 @@ function loadPartyFromUrl(encodedUrl) {
             codes.forEach(codeStr => {
                 let parts = codeStr.split('_');
                 let mainCode = parts[0];
-                let customVal = parts.length > 2 ? parseFloat(parts[1]) : 0;
+                let customVal = (mainCode === 'G') ? (parseFloat(parts[3]) || 0) : (parts.length > 2 ? parseFloat(parts[1]) : 0);
                 let flags = parts[parts.length - 1];
 
                 let isT1 = flags.includes('T1') || !flags.includes('T2');
@@ -1212,7 +1232,7 @@ function loadPartyFromUrl(encodedUrl) {
             codes.forEach(codeStr => {
                 let parts = codeStr.split('_');
                 let mainCode = parts[0];
-                let customVal = parts.length > 2 ? parseFloat(parts[1]) : 0;
+                let customVal = (mainCode === 'G') ? (parseFloat(parts[3]) || 0) : (parts.length > 2 ? parseFloat(parts[1]) : 0);
                 let flags = parts[parts.length - 1];
 
                 let isT1 = flags.includes('T1') || !flags.includes('T2');
