@@ -3,1072 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chia Tiền Nhậu - Sales TT Hà Nội</title>
+    <title>NHẬU CÙNG AI - TEAM SALES TT HÀ NỘI</title>
+    <!-- Thêm thư viện QRCode -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root {
-            --bud-red: #c8102e;
-            --michelob-blue: #002d72;
-            --corona-gold: #f5b324;
-            --bg-light: #f4f6f9;
-            --text-dark: #1e293b;
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
         }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
-        body { background-color: var(--bg-light); color: var(--text-dark); padding: 10px; display: flex; justify-content: center; }
-        .app-card { background: #fff; width: 100%; max-width: 500px; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12); border: 1px solid #e2e8f0; }
-        
-        .brand-header { background: linear-gradient(135deg, var(--bud-red) 0%, var(--michelob-blue) 60%, var(--corona-gold) 100%); color: white; padding: 20px 15px; text-align: center; }
-        .brand-header h1 { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .brand-header p { font-size: 12px; margin-top: 4px; opacity: 0.9; font-weight: 600; }
-
-        .content { padding: 16px; }
-
-        .role-bar { display: flex; background: #e2e8f0; padding: 4px; border-radius: 8px; margin-bottom: 12px; }
-        .role-btn { flex: 1; text-align: center; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; }
-        .role-btn.active { background: var(--michelob-blue); color: white; }
-
-        .btn-history-open { width: 100%; background: #2c3e50; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; }
-
-        .info-block { background: #f8fafc; border-left: 4px solid var(--corona-gold); padding: 12px; border-radius: 4px 8px 8px 4px; margin-bottom: 16px; }
-        .info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
-        .info-row:last-child { margin-bottom: 0; }
-        .info-row label { font-weight: 600; color: #475569; }
-        .info-row input, .info-row select { width: 55%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 700; }
-
-        .note-box { background: #fff1f0; border: 1px solid #ffa39e; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #cf1322; margin-top: 8px; display: none; }
-
-        .section-title { font-size: 13px; font-weight: 800; color: var(--michelob-blue); text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; }
-        .member-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #f1f5f9; background: #fff; }
-        .member-item:nth-child(even) { background: #fafafa; }
-        .member-info { display: flex; align-items: center; gap: 8px; }
-        .member-info input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--bud-red); cursor: pointer; }
-        .member-detail { font-size: 13px; }
-        .member-name { font-weight: 700; color: var(--text-dark); }
-        .member-role { font-size: 11px; color: #64748b; }
-        .member-pay { text-align: right; }
-        .pay-amount { font-weight: 800; color: var(--bud-red); font-size: 14px; }
-        .tang2-note { font-size: 11px; color: #dc2626; font-weight: 700; margin-top: 1px; }
-
-        .btn-pay-now { background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 4px; white-space: nowrap; }
-        .btn-opt { background: #e2e8f0; border: none; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: 4px; }
-
-        .admin-panel { background: #edf2f7; border: 1px dashed var(--michelob-blue); padding: 12px; border-radius: 8px; margin-bottom: 16px; display: none; }
-        .admin-panel-title { font-size: 11px; font-weight: 800; color: var(--michelob-blue); margin-bottom: 8px; text-transform: uppercase; }
-
-        .add-guest-box { background: #e6f7ff; border: 1px solid #91d5ff; padding: 10px; border-radius: 8px; margin-bottom: 12px; display: none; }
-        .add-guest-box input, .add-guest-box select { padding: 6px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 6px; }
-
-        .feedback-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 12px; border-radius: 8px; margin-top: 16px; }
-        .rating-stars { display: flex; gap: 6px; font-size: 22px; color: #d9d9d9; cursor: pointer; justify-content: center; margin: 6px 0; }
-        .rating-stars .star.active { color: var(--corona-gold); }
-        .feedback-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-        .tag { font-size: 11px; background: #fff; border: 1px solid #ffd591; padding: 4px 8px; border-radius: 12px; cursor: pointer; }
-        .tag.selected { background: var(--corona-gold); color: white; border-color: var(--corona-gold); }
-        .feedback-text { width: 100%; height: 60px; padding: 8px; font-size: 12px; border: 1px solid #ffe58f; border-radius: 6px; resize: none; margin-top: 6px; outline: none; }
-
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
-        .btn-act { padding: 12px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; text-align: center; }
-        .btn-calc { background: var(--bud-red); color: white; grid-column: span 2; }
-        .btn-sheets { background: #15803d; color: white; }
-        .btn-share { background: var(--michelob-blue); color: white; grid-column: span 2; }
-        .btn-add { background: var(--corona-gold); color: #000; padding: 6px; font-weight: 700; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 12px; }
-        .btn-send-feedback { background: #d48806; color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; }
-
-        /* Modal Popup */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
-        .modal-content { background: #fff; width: 100%; max-width: 450px; max-height: 90vh; border-radius: 12px; padding: 16px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
-        .modal-header h3 { font-size: 16px; color: var(--michelob-blue); }
-        .btn-close { background: #cbd5e1; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; }
-        .history-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #fafafa; }
-        .history-header-row { display: flex; justify-content: space-between; align-items: center; }
-        .history-title { font-weight: 700; color: #1e293b; font-size: 13px; }
-        .history-info { font-size: 12px; color: #64748b; margin: 4px 0; }
-        .btn-copy-item { background: #16a34a; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; display: block; text-align: center; }
-        
-        .qr-popup-img { width: 100%; max-width: 250px; border-radius: 12px; border: 1px solid #e2e8f0; margin: 6px auto; display: block; }
-        
-        /* Grid App Bank */
-        .bank-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; }
-        .bank-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 2px; text-decoration: none; color: #1e293b; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-        .bank-btn:active { background: #e2e8f0; transform: scale(0.95); }
-        .bank-icon { font-size: 16px; margin-bottom: 2px; }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .qr-container {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .qr-container img {
+            max-width: 250px;
+            height: auto;
+        }
     </style>
 </head>
 <body>
 
-<div class="app-card">
-    <div class="brand-header">
-        <h1>🍻 NHẬU CÙNG AI</h1>
-        <p>TEAM SALES TT HÀ NỘI</p>
-    </div>
-
-    <div class="content">
-        <div class="role-bar">
-            <div class="role-btn active" id="modeUser" onclick="switchMode('user')">Thành Viên (Xem & CK)</div>
-            <div class="role-btn" id="modeAdmin" onclick="switchMode('admin')">Quản Trị (Admin Sơn)</div>
+<div class="container">
+    <h2>NHẬU CÙNG AI - SALES TT HÀ NỘI</h2>
+    <form id="billForm">
+        <div class="form-group">
+            <label for="billTotal">Tổng hóa đơn (VNĐ):</label>
+            <input type="number" id="billTotal" placeholder="Nhập tổng số tiền" required>
         </div>
-
-        <button type="button" class="btn-history-open" onclick="openHistoryModal()">📜 Xem Lịch Sử Các Bữa Nhậu</button>
-
-        <div class="info-block">
-            <div class="info-row">
-                <label>📅 Ngày nhậu:</label>
-                <input type="date" id="partyDate" class="admin-edit">
-            </div>
-            <div class="info-row">
-                <label>🎉 Tên bữa nhậu:</label>
-                <input type="text" id="partyName" placeholder="VD: Tiệc tổng kết..." class="admin-edit">
-            </div>
-            <div class="info-row">
-                <label>📍 Nơi nhậu:</label>
-                <input type="text" id="partyLocation" placeholder="VD: Nhậu Quán X..." class="admin-edit">
-            </div>
-            <div class="info-row">
-                <label>💰 Bill Tăng 1 (VNĐ):</label>
-                <input type="number" id="totalBill" placeholder="0" class="admin-edit" onchange="onAdminInputChange()">
-            </div>
-            <div class="info-row" id="tang2Row" style="display:none; background:#fff7ed; padding:4px 6px; border-radius:6px; border:1px solid #ffedd5;">
-                <label style="color:#c2410c;">🔥 Bill Tăng 2 (VNĐ):</label>
-                <input type="number" id="tang2Bill" placeholder="0" class="admin-edit" onchange="onAdminInputChange()" style="border-color:#fdba74;">
-            </div>
-            
-            <div class="info-row" id="noteInputRow" style="display:none; margin-top:6px;">
-                <label style="font-size:11px; color:#cf1322;">📝 Ghi chú chi phí:</label>
-                <input type="text" id="costNote" placeholder="VD: Đã bao gồm tiền ship..." oninput="updateNoteDisplay()" style="font-weight:normal;">
-            </div>
-            <div class="note-box" id="noteDisplay">
-                📌 <strong>Ghi chú:</strong> <span id="noteText">Chưa có ghi chú phát sinh.</span>
-            </div>
+        <div class="form-group">
+            <label for="peopleCount">Số người chia:</label>
+            <input type="number" id="peopleCount" placeholder="Nhập số người" required>
         </div>
-
-        <div class="admin-panel" id="adminPanel">
-            <div class="admin-panel-title">⚙️ CẤU HÌNH THÀNH TOÁN & ĐỊNH MỨC QUẢN LÝ</div>
-            <div class="info-row"><label>Ngân hàng nhận:</label>
-                <select id="bankName" onchange="calculateMoney()">
-                    <option value="VCB">Vietcombank</option>
-                    <option value="MB">MBBank</option>
-                    <option value="TCB">Techcombank</option>
-                    <option value="VPB">VPBank</option>
-                </select>
-            </div>
-            <div class="info-row" style="margin-top: 4px;"><label>STK nhận tiền:</label><input type="text" id="bankAcc" value="0961000022699" onchange="calculateMoney()"></div>
-            <div class="info-row" style="margin-top: 4px;"><label>Chủ tài khoản:</label><input type="text" id="bankUser" value="HOANG VAN SON" onchange="calculateMoney()"></div>
-            <hr style="margin: 8px 0; border: 0; border-top: 1px dashed #cbd5e1;">
-            <div class="info-row"><label>Mức chi ASM (Công Nhận):</label><input type="number" id="fixAsm" placeholder="Nhập số tiền..." onchange="onAdminInputChange()"></div>
-            <div class="info-row" style="margin-top: 4px;"><label>Mức chi SS (Mỗi người):</label><input type="number" id="fixSs" placeholder="Nhập số tiền..." onchange="onAdminInputChange()"></div>
+        <div class="form-group">
+            <label for="serviceFee">Phí dịch vụ / Phát sinh (VNĐ):</label>
+            <input type="number" id="serviceFee" value="0">
         </div>
-
-        <div class="add-guest-box" id="addGuestBox">
-            <div style="font-size: 11px; font-weight: 800; color: #0050b3; margin-bottom: 6px;">➕ THÊM THÀNH VIÊN NGOÀI DANH SÁCH</div>
-            <input type="text" id="newGuestName" placeholder="Tên khách (VD: Anh Nam PG)" style="width: 100%;">
-            <div style="display: flex; gap: 6px;">
-                <select id="newGuestRole" style="width: 100%;" onchange="toggleCustomAmountInput()">
-                    <option value="SR">SR / Khách (Chia đều)</option>
-                    <option value="SS">SS (Định mức SS)</option>
-                    <option value="ASM">ASM (Định mức ASM)</option>
-                    <option value="CUSTOM">Số tiền cụ thể (VNĐ)</option>
-                </select>
-                <input type="number" id="newGuestCustomAmount" placeholder="Nhập số tiền..." style="width: 60%; display: none;">
-            </div>
-            <button class="btn-add" onclick="addNewGuest()">+ Thêm vào danh sách đi nhậu</button>
+        <div class="form-group">
+            <label for="bankSelect">Ngân hàng nhận tiền:</label>
+            <select id="bankSelect">
+                <option value="MB">MBBank</option>
+                <option value="VCB">Vietcombank</option>
+                <option value="TCB">Techcombank</option>
+                <option value="ACB">ACB</option>
+                <option value="VPB">VPBank</option>
+            </select>
         </div>
-
-        <div class="section-title">
-            <span>👥 Danh sách & Chuyển khoản</span>
-            <span style="font-size: 11px; color: #64748b;" id="countParticipate">(0 chọn)</span>
+        <div class="form-group">
+            <label for="accountNo">Số tài khoản:</label>
+            <input type="text" id="accountNo" placeholder="Nhập số tài khoản nhận" required>
         </div>
-
-        <div id="memberList"></div>
-
-        <button class="btn-act btn-calc" id="btnCalc" onclick="onAdminInputChange()" style="display:none; margin-top: 12px;">TÍNH TIỀN & CẬP NHẬT</button>
-
-        <div class="feedback-box">
-            <div style="font-size: 12px; font-weight: 800; color: #873800; text-align: center;">⭐ ĐÁNH GIÁ & ĐÓNG GÓP Ý KIẾN</div>
-            <div class="info-row" style="margin-top: 8px;">
-                <label style="font-size: 11px;">Tên người đánh giá:</label>
-                <input type="text" id="reviewerName" placeholder="Nhập tên bạn..." style="width: 60%; font-weight: normal;">
-            </div>
-            <div class="rating-stars" onclick="rateParty(event)">
-                <span class="star active" data-val="1">★</span>
-                <span class="star active" data-val="2">★</span>
-                <span class="star active" data-val="3">★</span>
-                <span class="star active" data-val="4">★</span>
-                <span class="star active" data-val="5">★</span>
-            </div>
-            <div class="feedback-tags">
-                <div class="tag selected" onclick="toggleTag(this)">🍺 Bia cold chuẩn style</div>
-                <div class="tag selected" onclick="toggleTag(this)">🍖 Món ăn chất lượng</div>
-                <div class="tag" onclick="toggleTag(this)">❄️ Không gian thoáng</div>
-                <div class="tag" onclick="toggleTag(this)">🔥 Anh em Sales hết mình</div>
-            </div>
-            <textarea class="feedback-text" id="feedbackComment" placeholder="Chia sẻ thêm ý kiến của bạn..."></textarea>
-            <button class="btn-send-feedback" onclick="sendFeedback()">📩 Gửi Ý Kiến Đóng Góp</button>
+        <div class="form-group">
+            <label for="accountName">Tên chủ tài khoản:</label>
+            <input type="text" id="accountName" placeholder="TÊN CHỦ TÀI KHOẢN" required>
         </div>
+        <button type="button" onclick="calculateMoney()">TÍNH TIỀN & TẠO MA QR</button>
+    </form>
 
-        <div class="btn-group">
-            <button class="btn-act btn-share" onclick="copyWebLink()">🔗 Copy Link Bữa Này Để Gửi Zalo</button>
-            <button class="btn-act btn-sheets" id="btnSaveSheets" onclick="saveToGoogleSheets()" style="display:none; grid-column: span 2;">📊 Lưu Google Sheets</button>
-        </div>
-    </div>
-</div>
-
-<div id="historyModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>📜 LỊCH SỬ CÁC BỮA NHẬU</h3>
-            <button class="btn-close" onclick="closeHistoryModal()">✕ Đóng</button>
-        </div>
-        <div id="historyList"></div>
-    </div>
-</div>
-
-<div id="qrModal" class="modal-overlay">
-    <div class="modal-content" style="text-align: center;">
-        <div class="modal-header">
-            <h3>📲 MÃ QUÉT CHUYỂN KHOẢN</h3>
-            <button class="btn-close" onclick="closeQrModal()">✕ Đóng</button>
-        </div>
-        <div id="qrModalBody">
-            <p style="font-size:13px; font-weight:700; color:#1e293b;" id="qrMemberName"></p>
-            <p style="font-size:18px; font-weight:800; color:#c8102e; margin:2px 0;" id="qrAmountDisplay"></p>
-            <img id="qrImageDisplay" src="" class="qr-popup-img" alt="Mã QR Chuyển Khoản">
-            
-            <button type="button" class="btn-act btn-share" style="width:100%; margin:8px 0; background-color: #002d72;" onclick="downloadQrImage()">📥 Lưu Mã QR Về Máy</button>
-
-            <p style="font-size:11px; font-weight:700; color:#002d72; margin-top:8px;">MỞ NHANH APP NGÂN HÀNG TRÊN DI ĐỘNG:</p>
-            <div class="bank-grid">
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('vcb')"><span class="bank-icon">💚</span>VCB</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('mb')"><span class="bank-icon">💙</span>MBBank</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('tcb')"><span class="bank-icon">❤️</span>Techcom</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('vp')"><span class="bank-icon">💚</span>VPBank</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('icb')"><span class="bank-icon">💙</span>Vietin</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('bidv')"><span class="bank-icon">💚</span>BIDV</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('vaba')"><span class="bank-icon">🤎</span>Agri</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('acb')"><span class="bank-icon">💙</span>ACB</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('tpb')"><span class="bank-icon">💜</span>TPBank</button>
-                <button type="button" class="bank-btn" onclick="openUniversalBankApp('msb')"><span class="bank-icon">🧡</span>MSB</button>
-            </div>
+    <div class="result" id="resultBlock" style="display:none;">
+        <h3>Kết quả chia tiền:</h3>
+        <p>Mỗi người cần trả: <strong id="perPersonAmount" style="color: #d9534f; font-size: 1.2em;">0</strong> VNĐ</p>
+        <div class="qr-container">
+            <h4>Mã VietQR chuyển khoản:</h4>
+            <img id="qr-img" src="" alt="Mã VietQR">
         </div>
     </div>
 </div>
 
 <script>
-    const ADMIN_PIN = "3979"; 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzv3jfnwtyJTq1ymTC27CNRcXVxf8v6w9qdmAT3xYlakZRE9bbPqOBqD1LIqLTlpnlr/exec"; 
+function calculateMoney() {
+    // 1. Lấy dữ liệu đầu vào
+    const billTotal = parseFloat(document.getElementById('billTotal').value) || 0;
+    const peopleCount = parseInt(document.getElementById('peopleCount').value) || 0;
+    const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
+    
+    const bank = document.getElementById('bankSelect').value;
+    const accountNo = document.getElementById('accountNo').value.trim();
+    const accountName = document.getElementById('accountName').value.trim();
 
-    let cachedHistory = null; // Lưu dữ liệu lịch sử tải ngầm
-
-// Tải ngầm ngay khi app vừa load xong
-document.addEventListener('DOMContentLoaded', () => {
-    preloadHistory();
-});
-
-function preloadHistory() {
-    fetch(SCRIPT_URL + "?action=getHistory")
-        .then(response => response.json())
-        .then(data => {
-            cachedHistory = data;
-        })
-        .catch(err => console.log("Tải ngầm lịch sử chưa xong hoặc lỗi:", err));
-}
-    const defaultMembers = [
-        { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00143', name: 'LÝ HỒNG MINH', role: 'SS', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00141', name: 'NGUYỄN QUANG THIỀU', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00314', name: 'TRẦN ĐĂNG TIẾN', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00571', name: 'NGUYỄN XUÂN ĐỨC', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00650', name: 'ĐỖ ĐÌNH BẢO', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00662', name: 'TRẦN ĐĂNG PHƯƠNG', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00480', name: 'NGUYỄN VĂN ĐẠT', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00137', name: 'NGUYỄN HỮU VINH', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00139', name: 'LÊ VĂN LÂM', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00138', name: 'ĐỖ THÀNH TRUNG', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00142', name: 'NGUYỄN HÀ NAM', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00374', name: 'CẨN TRUNG HIẾU', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00140', name: 'NGUYỄN NGỌC LONG', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00572', name: 'TRỊNH TRỌNG TIỆP', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00580', name: 'NGUYỄN BÁ NHÂN', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00666', name: 'TRIỆU NGỌC ĐỨC', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00706', name: 'LƯƠNG VĂN HÒA', role: 'SR', selected: false, isGuest: false, selectedT2: false },
-        { code: 'ABISF00769', name: 'ĐÀO MẬU DUY', role: 'SR', selected: false, isGuest: false, selectedT2: false }
-    ];
-
-    let members = JSON.parse(JSON.stringify(defaultMembers));
-    let currentRole = 'user';
-    let currentRating = 5;
-    let currentPayInfo = { name: '', amount: 0, qrUrl: '' };
-    let isHistoryMode = false;
-
-    function cleanDateFormat(dateStr) {
-        if (!dateStr) return '';
-        let str = String(dateStr).trim();
-        if (str.includes('T')) return str.split('T')[0];
-        if (str.includes(' ')) str = str.split(' ')[0];
-        return str;
+    // Kiểm tra dữ liệu hợp lệ
+    if (peopleCount <= 0) {
+        alert('Vui lòng nhập số người lớn hơn 0!');
+        return;
     }
-
-    function copyTextToClipboard(text) {
-        if (navigator.clipboard && window.isSecureContext) {
-            return navigator.clipboard.writeText(text).then(() => true).catch(() => fallbackCopyText(text));
-        } else {
-            return Promise.resolve(fallbackCopyText(text));
-        }
-    }
-
-    function fallbackCopyText(text) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        let successful = false;
-        try { successful = document.execCommand('copy'); } catch (err) { successful = false; }
-        document.body.removeChild(textArea);
-        return successful;
-    }
-
-    function toggleCustomAmountInput() {
-        const roleSel = document.getElementById('newGuestRole').value;
-        const customInp = document.getElementById('newGuestCustomAmount');
-        customInp.style.display = (roleSel === 'CUSTOM') ? 'block' : 'none';
-    }
-
-    function onAdminInputChange() {
-        isHistoryMode = false;
-        calculateMoney();
-    }
-
-    function renderMembers() {
-        const container = document.getElementById('memberList');
-        container.innerHTML = '';
-
-        members.forEach((m, idx) => {
-            const adminBtns = (currentRole === 'admin' && m.isGuest) 
-                ? `<button class="btn-opt" onclick="editGuest(${idx})" title="Sửa">✏️</button>
-                   <button class="btn-opt" onclick="deleteGuest(${idx})" title="Xóa">🗑️</button>` 
-                : '';
-
-            const tang2Checkbox = (currentRole === 'admin')
-                ? `<label style="font-size:11px; margin-left:8px; color:#c2410c; cursor:pointer;"><input type="checkbox" id="cbT2_${idx}" ${m.selectedT2 ? 'checked' : ''} onchange="toggleMemberT2(${idx})"> Tăng 2</label>`
-                : '';
-
-            const roleDisplay = m.customAmount !== undefined 
-                ? `${m.code} - ${m.role} (${m.customAmount.toLocaleString('vi-VN')}đ)` 
-                : `${m.code} - ${m.role}`;
-
-            const html = `
-                <div class="member-item" id="item_${idx}">
-                    <div class="member-info">
-                        <input type="checkbox" id="cb_${idx}" ${m.selected ? 'checked' : ''} ${currentRole === 'user' ? 'disabled' : ''} onchange="toggleMember(${idx})">
-                        <div class="member-detail">
-                            <div class="member-name">${m.name} ${adminBtns} ${tang2Checkbox}</div>
-                            <div class="member-role">${roleDisplay}</div>
-                        </div>
-                    </div>
-                    <div class="member-pay" id="payBlock_${idx}">
-                        <div class="pay-amount" id="amount_${idx}">0 đ</div>
-                        <div class="tang2-note" id="tang2Note_${idx}" style="display:none;"></div>
-                        <button type="button" class="btn-pay-now" onclick="openQrModal(${idx})">Chuyển khoản ngay</button>
-                    </div>
-                </div>
-            `;
-            container.innerHTML += html;
-        });
-
-        if (isHistoryMode) {
-            updateDisplayFromHistoryData();
-        } else {
-            calculateMoney();
-        }
-    }
-
-    function updateDisplayFromHistoryData() {
-        let selectedCount = 0;
-        members.forEach((m, idx) => {
-            const itemRow = document.getElementById(`item_${idx}`);
-            if (!itemRow) return;
-
-            const isParticipated = m.selected || m.selectedT2;
-            if (isParticipated) selectedCount++;
-
-            if (currentRole === 'user' && !isParticipated) {
-                itemRow.style.display = 'none';
-                return;
-            }
-            itemRow.style.display = 'flex';
-
-            let displayMoney = m.historyAmount !== undefined ? m.historyAmount : 0;
-            document.getElementById(`amount_${idx}`).innerText = displayMoney.toLocaleString('vi-VN') + ' đ';
-        });
-
-        document.getElementById('countParticipate').innerText = `(${selectedCount}/${members.length} ĐI NHẬU)`;
-    }
-
-    function toggleMember(idx) {
-        isHistoryMode = false;
-        members[idx].selected = document.getElementById(`cb_${idx}`).checked;
-        calculateMoney();
-    }
-
-    function toggleMemberT2(idx) {
-        isHistoryMode = false;
-        members[idx].selectedT2 = document.getElementById(`cbT2_${idx}`).checked;
-        calculateMoney();
-    }
-
-    function openQrModal(idx) {
-        const m = members[idx];
-        const bankName = document.getElementById('bankName').value;
-        const bankAcc = document.getElementById('bankAcc').value;
-        
-        let amt = 0;
-        const amtElem = document.getElementById(`amount_${idx}`);
-        if (amtElem) {
-            amt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
-        }
-
-        const memo = encodeURIComponent(`${m.name} CK tien nhau`);
-        const qrUrl = `https://img.vietqr.io/image/${bankName}-${bankAcc}-compact2.png?amount=${amt}&addInfo=${memo}`;
-
-        currentPayInfo = { name: m.name, amount: amt, qrUrl: qrUrl };
-
-        document.getElementById('qrMemberName').innerText = `Thành viên: ${m.name}`;
-        document.getElementById('qrAmountDisplay').innerText = `${amt.toLocaleString('vi-VN')} VNĐ`;
-        document.getElementById('qrImageDisplay').src = qrUrl;
-        document.getElementById('qrModal').style.display = 'flex';
-    }
-
-    function closeQrModal() {
-        document.getElementById('qrModal').style.display = 'none';
-    }
-
-    function copyQrInfo(showAlert = false) {
-        const bankName = document.getElementById('bankName').value;
-        const bankAcc = document.getElementById('bankAcc').value;
-        const bankUser = document.getElementById('bankUser').value;
-
-        const infoStr = `NGÂN HÀNG: ${bankName}\nSTK: ${bankAcc}\nCHỦ TK: ${bankUser}\nSỐ TIỀN: ${currentPayInfo.amount.toLocaleString('vi-VN')} VNĐ\nNỘI DUNG: ${currentPayInfo.name} CK tien nhau`;
-        
-        copyTextToClipboard(infoStr).then(res => {
-            if (showAlert) {
-                if (res) alert("Đã copy đầy đủ Số tài khoản & Số tiền!");
-                else prompt("Copy thông tin:", infoStr);
-            }
-        });
-    }
-
-    function downloadQrImage() {
-        if (!currentPayInfo.qrUrl) return;
-
-        fetch(currentPayInfo.qrUrl)
-            .then(response => response.blob())
-            .then(blob => {
-                const blobUrl = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = `VietQR_${currentPayInfo.name.replace(/\s+/g, '_')}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(blobUrl);
-                alert("Đã lưu mã QR về thiết bị!");
-            })
-            .catch(() => { window.open(currentPayInfo.qrUrl, '_blank'); });
-    }
-
-    function openUniversalBankApp(appCode) {
-        const bankName = document.getElementById('bankName').value.toLowerCase();
-        const bankAcc = document.getElementById('bankAcc').value;
-        const bankUser = encodeURIComponent(document.getElementById('bankUser').value);
-        const memo = encodeURIComponent(`${currentPayInfo.name} CK tien nhau`);
-        
-        copyQrInfo(false);
-        window.location.href = `https://dl.vietqr.io/pay?app=${appCode}&ba=${bankAcc}@${bankName}&am=${currentPayInfo.amount}&tn=${memo}&bn=${bankUser}`;
-    }
-
-    function addNewGuest() {
-        const name = document.getElementById('newGuestName').value.trim();
-        const roleSelect = document.getElementById('newGuestRole').value;
-        const customAmount = parseFloat(document.getElementById('newGuestCustomAmount').value) || 0;
-
-        if (!name) { alert('Vui lòng nhập tên khách!'); return; }
-        if (roleSelect === 'CUSTOM' && customAmount <= 0) { alert('Vui lòng nhập số tiền hợp lệ!'); return; }
-        
-        isHistoryMode = false;
-        const code = 'KHÁCH' + Math.floor(100 + Math.random() * 900);
-        let guestObj = { 
-            code: code, 
-            name: name.toUpperCase(), 
-            role: roleSelect === 'CUSTOM' ? 'CỐ ĐỊNH' : roleSelect, 
-            selected: true, 
-            selectedT2: false,
-            isGuest: true 
-        };
-
-        if (roleSelect === 'CUSTOM') guestObj.customAmount = customAmount;
-
-        members.push(guestObj);
-        document.getElementById('newGuestName').value = '';
-        document.getElementById('newGuestCustomAmount').value = '';
-        renderMembers();
-    }
-
-    function editGuest(idx) {
-        const m = members[idx];
-        const newName = prompt('Chỉnh sửa tên khách:', m.name);
-        if (newName === null) return;
-        m.name = newName.trim().toUpperCase() || m.name;
-
-        if (m.customAmount !== undefined) {
-            const newMoney = prompt('Chỉnh sửa số tiền (VNĐ):', m.customAmount);
-            if (newMoney !== null && !isNaN(parseFloat(newMoney))) m.customAmount = parseFloat(newMoney);
-        }
-        isHistoryMode = false;
-        renderMembers();
-    }
-
-    function deleteGuest(idx) {
-        if (confirm(`Bạn có chắc chắn muốn xóa "${members[idx].name}" khỏi danh sách?`)) {
-            members.splice(idx, 1);
-            isHistoryMode = false;
-            renderMembers();
-        }
-    }
-
-    function updateNoteDisplay() {
-        const val = document.getElementById('costNote').value.trim();
-        const displayBox = document.getElementById('noteDisplay');
-        const textSpan = document.getElementById('noteText');
-        if (val) {
-            displayBox.style.display = 'block';
-            textSpan.innerText = val;
-        } else {
-            displayBox.style.display = 'none';
-        }
-    }
-
-    function calculateMoney() {
-        const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
-        const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
-        const fixAsm = parseFloat(document.getElementById('fixAsm').value) || 0;
-        const fixSs = parseFloat(document.getElementById('fixSs').value) || 0;
-
-        let selectedCount = 0;
-        let totalFixedMoney = 0;
-        let srCount = 0;
-        let t2Count = 0;
-
-        members.forEach(m => {
-            if (m.selected) {
-                selectedCount++;
-                if (m.customAmount !== undefined) totalFixedMoney += m.customAmount;
-                else if (m.role === 'ASM') totalFixedMoney += fixAsm;
-                else if (m.role === 'SS') totalFixedMoney += fixSs;
-                else if (m.role === 'SR') srCount++;
-            }
-            if (m.selectedT2) t2Count++;
-        });
-
-        document.getElementById('countParticipate').innerText = `(${selectedCount}/${members.length} ĐI NHẬU)`;
-
-        const remainForSr = Math.max(0, totalBill - totalFixedMoney);
-        const perSrShare = srCount > 0 ? Math.round(remainForSr / srCount) : 0;
-        const perT2Share = (t2Count > 0 && tang2Bill > 0) ? Math.round(tang2Bill / t2Count) : 0;
-
-        members.forEach((m, idx) => {
-            const itemRow = document.getElementById(`item_${idx}`);
-            if (!itemRow) return;
-
-            const isParticipated = m.selected || m.selectedT2;
-            if (currentRole === 'user' && !isParticipated) {
-                itemRow.style.display = 'none';
-                return;
-            }
-            itemRow.style.display = 'flex';
-
-            let t1Amount = 0;
-            if (m.selected) {
-                if (m.customAmount !== undefined) t1Amount = m.customAmount;
-                else if (m.role === 'ASM') t1Amount = fixAsm;
-                else if (m.role === 'SS') t1Amount = fixSs;
-                else t1Amount = perSrShare;
-            }
-
-            let t2Amount = m.selectedT2 ? perT2Share : 0;
-            let finalAmount = t1Amount + t2Amount;
-
-            document.getElementById(`amount_${idx}`).innerText = finalAmount.toLocaleString('vi-VN') + ' đ';
-
-            const t2NoteElem = document.getElementById(`tang2Note_${idx}`);
-            if (t2NoteElem) {
-                if (t2Amount > 0) {
-                    t2NoteElem.style.display = 'block';
-                    t2NoteElem.innerText = `* +${t2Amount.toLocaleString('vi-VN')}đ (Tăng 2)`;
-                } else {
-                    t2NoteElem.style.display = 'none';
-                }
-            }
-        });
-    }
-
-    function switchMode(role) {
-        if (role === 'admin' && currentRole !== 'admin') {
-            const pin = prompt("Vui lòng nhập mã PIN Admin:");
-            if (pin !== ADMIN_PIN) { alert("Mã PIN không chính xác!"); return; }
-        }
-
-        currentRole = role;
-        document.getElementById('modeUser').classList.toggle('active', role === 'user');
-        document.getElementById('modeAdmin').classList.toggle('active', role === 'admin');
-
-        const inputs = document.querySelectorAll('.admin-edit');
-        inputs.forEach(inp => inp.disabled = (role === 'user'));
-
-        document.getElementById('adminPanel').style.display = role === 'admin' ? 'block' : 'none';
-        document.getElementById('addGuestBox').style.display = role === 'admin' ? 'block' : 'none';
-        document.getElementById('noteInputRow').style.display = role === 'admin' ? 'flex' : 'none';
-        document.getElementById('tang2Row').style.display = role === 'admin' ? 'flex' : 'none';
-        document.getElementById('btnCalc').style.display = role === 'admin' ? 'block' : 'none';
-        document.getElementById('btnSaveSheets').style.display = role === 'admin' ? 'block' : 'none';
-
-        renderMembers();
-    }
-
-    function rateParty(e) {
-        if (e.target.classList.contains('star')) {
-            currentRating = parseInt(e.target.getAttribute('data-val'));
-            document.querySelectorAll('.star').forEach(s => {
-                s.classList.toggle('active', parseInt(s.getAttribute('data-val')) <= currentRating);
-            });
-        }
-    }
-
-    function toggleTag(el) { el.classList.toggle('selected'); }
-
-    function sendFeedback() {
-        const name = document.getElementById('reviewerName').value.trim();
-        const comment = document.getElementById('feedbackComment').value.trim();
-        if (!name) { alert('Vui lòng nhập tên của bạn!'); return; }
-
-        const selectedTags = Array.from(document.querySelectorAll('.feedback-tags .tag.selected')).map(t => t.innerText).join(', ');
-
-        const formData = new URLSearchParams();
-        formData.append('type', 'FEEDBACK');
-        formData.append('date', document.getElementById('partyDate').value);
-        formData.append('partyName', document.getElementById('partyName').value);
-        formData.append('location', document.getElementById('partyLocation').value);
-        formData.append('reviewer', name);
-        formData.append('stars', currentRating + ' sao');
-        formData.append('tags', selectedTags);
-        formData.append('comment', comment);
-
-        alert('Đang gửi đánh giá lên Google Sheets...');
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
-        .then(() => { alert(`Cảm ơn ${name} đã gửi ý kiến!`); document.getElementById('feedbackComment').value = ''; });
-    }
-
-    function buildCurrentShareUrl() {
-        const partyName = encodeURIComponent(document.getElementById('partyName').value || '');
-        const partyDate = encodeURIComponent(document.getElementById('partyDate').value || '');
-        const location = encodeURIComponent(document.getElementById('partyLocation').value || '');
-        const totalBill = document.getElementById('totalBill').value || '0';
-        const tang2Bill = document.getElementById('tang2Bill').value || '0';
-        const fixAsm = document.getElementById('fixAsm').value || '';
-        const fixSs = document.getElementById('fixSs').value || '';
-        
-        let noteInput = document.getElementById('costNote').value.trim();
-        if (!noteInput) {
-            const noteTextElem = document.getElementById('noteText');
-            if (noteTextElem && noteTextElem.innerText !== "Chưa có ghi chú phát sinh.") {
-                noteInput = noteTextElem.innerText.trim();
-            }
-        }
-        const costNote = encodeURIComponent(noteInput);
-
-        let encodedMembers = [];
-        members.forEach((m, idx) => {
-            if (m.selected || m.selectedT2) {
-                let flags = [];
-                if (m.selected) flags.push('T1');
-                if (m.selectedT2) flags.push('T2');
-                const flagStr = flags.join('&');
-
-                let amtElem = document.getElementById(`amount_${idx}`);
-                let currentAmt = 0;
-                if (amtElem) {
-                    currentAmt = parseFloat(amtElem.innerText.replace(/[^0-9]/g, '')) || 0;
-                }
-
-                if (m.isGuest) {
-                    encodedMembers.push(`G_${encodeURIComponent(m.name)}_${m.role}_${currentAmt}_${flagStr}`);
-                } else {
-                    encodedMembers.push(`${m.code}_${currentAmt}_${flagStr}`);
-                }
-            }
-        });
-
-        const baseUrl = window.location.origin + window.location.pathname;
-        return `${baseUrl}?name=${partyName}&date=${partyDate}&loc=${location}&bill=${totalBill}&b2=${tang2Bill}&fasm=${fixAsm}&fss=${fixSs}&note=${costNote}&m=${encodedMembers.join(',')}`;
-    }
-
-    function copyWebLink() {
-        const shareUrl = buildCurrentShareUrl();
-        copyTextToClipboard(shareUrl).then(res => {
-            if (res) alert("Đã copy link bữa nhậu thành công!\nBạn có thể dán (Paste) để gửi ngay vào nhóm Zalo.");
-            else prompt("Sao chép link dưới đây:", shareUrl);
-        });
-    }
-
-    function saveToGoogleSheets() {
-        const partyName = document.getElementById('partyName').value.trim();
-        const partyDate = document.getElementById('partyDate').value;
-        const location = document.getElementById('partyLocation').value.trim();
-        const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
-        const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
-        const costNote = document.getElementById('costNote').value.trim();
-
-        if (!partyName || !partyDate) { alert("Vui lòng nhập đầy đủ Tên bữa nhậu và Ngày nhậu!"); return; }
-
-        const selectedMembers = members.filter(m => m.selected || m.selectedT2).map(m => {
-            const amtText = document.getElementById(`amount_${members.indexOf(m)}`) ? document.getElementById(`amount_${members.indexOf(m)}`).innerText : '0 đ';
-            return { name: m.name, role: m.role, amount: parseFloat(amtText.replace(/[^0-9]/g, '')) || 0 };
-        });
-
-        const shareUrl = buildCurrentShareUrl();
-
-        const formData = new URLSearchParams();
-        formData.append('type', 'PARTY_SAVE');
-        formData.append('date', partyDate);
-        formData.append('partyName', partyName);
-        formData.append('location', location);
-        formData.append('totalBill', totalBill + tang2Bill);
-        formData.append('costNote', costNote);
-        formData.append('membersData', JSON.stringify(selectedMembers));
-        formData.append('shareUrl', shareUrl);
-
-        alert('Đang lưu thông tin bữa nhậu lên Google Sheets...');
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
-        .then(() => {
-            alert('Đã lưu thành công!');
-            savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
-        }).catch(err => alert('Lỗi khi lưu: ' + err));
-    }
-
-    function savePartyToLocalCache(name, date, loc, bill, note, membersArr, shareUrl) {
-        let historyList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-        let partyId = `${name}_${date}`;
-        
-        let partyObj = {
-            id: partyId,
-            name: name,
-            date: date,
-            loc: loc || 'N/A',
-            bill: bill,
-            note: note,
-            shareUrl: shareUrl,
-            rows: membersArr.map(m => ({
-                'Tên người/NV': m.name,
-                'Chức danh': m.role,
-                'Số tiền': m.amount
-            }))
-        };
-
-        // Lọc bỏ các bản ghi trùng ID cũ để chống nhân bản
-        historyList = historyList.filter(p => p.id !== partyId);
-        historyList.unshift(partyObj);
-        
-        localStorage.setItem('party_history_extra', JSON.stringify(historyList));
-    }
-
-    function getCompleteDefaultHistory() {
-        return [
-            {
-                id: "Chốt Quý An Thuận Hưng_2026-09-18",
-                name: "Chốt Quý An Thuận Hưng",
-                date: "2026-09-18",
-                loc: "Quản Nhỏ Nguyễn Khánh",
-                bill: 4615000,
-                note: "Đã gồm: 200k bọ múa, 640k 4t ultra, 250k bánh trung thu",
-                rows: [
-                    { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 1400000 },
-                    { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 803750 },
-                    { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 803750 },
-                    { 'Tên người/NV': 'ĐỖ ĐÌNH BẢO', 'Chức danh': 'SR', 'Số tiền': 803750 },
-                    { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 803750 }
-                ]
-            },
-            {
-                id: "Chốt Q3'26_2026-09-11",
-                name: "Chốt Q3'26",
-                date: "2026-09-11",
-                loc: "Nướng bò tre Đông Anh",
-                bill: 3570000,
-                note: "Đã gồm 800k 4t Ultra250 Đạt Tình",
-                rows: [
-                    { 'Tên người/NV': 'HOÀNG CÔNG NHẬN', 'Chức danh': 'ASM', 'Số tiền': 600000 },
-                    { 'Tên người/NV': 'HOÀNG VĂN SƠN', 'Chức danh': 'SS', 'Số tiền': 400000 },
-                    { 'Tên người/NV': 'LÝ HỒNG MINH', 'Chức danh': 'SS', 'Số tiền': 400000 },
-                    { 'Tên người/NV': 'NGUYỄN QUANG THIỀU', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                    { 'Tên người/NV': 'TRẦN ĐĂNG TIẾN', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                    { 'Tên người/NV': 'TRẦN ĐĂNG PHƯƠNG', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                    { 'Tên người/NV': 'NGUYỄN VĂN ĐẠT', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                    { 'Tên người/NV': 'NGUYỄN HỮU VINH', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                    { 'Tên người/NV': 'NGUYỄN HÀ NAM', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                    { 'Tên người/NV': 'CẨN TRUNG HIẾU', 'Chức danh': 'SR', 'Số tiền': 271250 },
-                    { 'Tên người/NV': 'NGUYỄN NGỌC LONG', 'Chức danh': 'SR', 'Số tiền': 271250 }
-                ]
-            }
-        ];
-    }
-
-    function openHistoryModal() {
-    const modal = document.getElementById('historyModal');
-    if (modal) modal.style.display = 'flex';
-
-    const container = document.getElementById('historyList');
-
-    // Nếu đã có dữ liệu tải ngầm trước đó -> Render ngay lập tức!
-    if (cachedHistory) {
-        renderHistoryList(cachedHistory);
-        // Vẫn gọi ngầm để cập nhật mới nhất nếu có thay đổi
-        preloadHistory();
+    if (!accountNo) {
+        alert('Vui lòng nhập số tài khoản!');
         return;
     }
 
-    // Nếu bấm quá nhanh khi chưa kịp tải ngầm xong:
-    container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">⏳ Đang tải dữ liệu từ Google Sheets...</div>';
+    // 2. Tính toán số tiền mỗi người
+    const totalAmount = billTotal + serviceFee;
+    const rawPerPerson = totalAmount / peopleCount;
+    
+    // Làm tròn lên đến hàng nghìn gần nhất (ví dụ: 102.300 -> 103.000)
+    const perPerson = Math.ceil(rawPerPerson / 1000) * 1000;
 
-    fetch(SCRIPT_URL + "?action=getHistory")
-        .then(response => response.json())
-        .then(sheetData => {
-            cachedHistory = sheetData;
-            renderHistoryList(sheetData);
-        })
-        .catch(err => {
-            console.error("Lỗi lấy dữ liệu Sheet:", err);
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:#cf1322;">❌ Lỗi kết nối Google Sheets! Vui lòng thử lại.</div>';
-        });
+    // 3. Hiển thị kết quả
+    document.getElementById('perPersonAmount').innerText = perPerson.toLocaleString('vi-VN');
+    document.getElementById('resultBlock').style.display = 'block';
+
+    // 4. Tạo mã VietQR tự động thông qua VietQR API
+    const addInfo = encodeURIComponent('Nhan cung AI TT Ha Noi');
+    const encodedAccountName = encodeURIComponent(accountName);
+    const qrUrl = `https://img.vietqr.io/image/${bank}-${accountNo}-compact2.png?amount=${perPerson}&addInfo=${addInfo}&accountName=${encodedAccountName}`;
+
+    document.getElementById('qr-img').src = qrUrl;
 }
-
-    function closeHistoryModal() {
-        const modal = document.getElementById('historyModal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    function renderHistoryList(list) {
-        const container = document.getElementById('historyList');
-        if (!list || list.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Chưa có lịch sử bữa nhậu nào.</div>';
-            return;
-        }
-
-        container.innerHTML = '';
-        list.forEach((item) => {
-            const billNum = parseFloat(item.bill) || 0;
-            const billFormatted = billNum > 0 ? billNum.toLocaleString('vi-VN') + 'đ' : '0đ';
-            const safeKey = encodeURIComponent(item.id);
-
-            const targetUrl = item.selectedCodes || '';
-            const safeUrl = encodeURIComponent(targetUrl);
-            const html = `
-                <div class="history-item">
-                    <div class="history-header-row">
-                        <div class="history-title">🎉 ${item.name}</div>
-                    </div>
-                    <div class="history-info">📅 Ngày: ${formatDisplayDate(item.date)} | 📍 Nơi: ${item.loc}</div>
-                    <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
-                    ${item.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${item.note}</div>` : ''}
-                    <button class="btn-copy-item" onclick="loadPartyFromUrl('${safeUrl}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
-                </div>
-            `;
-            container.innerHTML += html;
-        });
-    }
-
-    function loadPartyFromUrl(encodedUrl) {
-    const rawUrl = decodeURIComponent(encodedUrl);
-    if (!rawUrl) {
-        alert("Bữa nhậu này chưa có link dữ liệu chi tiết!");
-        return;
-    }
-
-    try {
-        // Trích xuất phần tham số đằng sau dấu ? (query string)
-        const queryString = rawUrl.includes('?') ? rawUrl.split('?')[1] : rawUrl;
-        const urlParams = new URLSearchParams(queryString);
-
-        // Đọc thông tin bữa nhậu từ link
-        const name = urlParams.get('name');
-        const date = urlParams.get('date');
-        const loc = urlParams.get('loc');
-        const bill = urlParams.get('bill');
-        const b2 = urlParams.get('b2');
-        const fasm = urlParams.get('fasm');
-        const fss = urlParams.get('fss');
-        const note = urlParams.get('note');
-        const mList = urlParams.get('m');
-
-        // Gán lại dữ liệu vào các ô nhập thông tin
-        if (name) document.getElementById('partyName').value = decodeURIComponent(name);
-        if (date) document.getElementById('partyDate').value = cleanDateFormat(decodeURIComponent(date));
-        if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
-        if (bill) document.getElementById('totalBill').value = bill;
-        if (b2) document.getElementById('tang2Bill').value = b2;
-        if (fasm !== null) document.getElementById('fixAsm').value = fasm;
-        if (fss !== null) document.getElementById('fixSs').value = fss;
-        
-        if (note) {
-            document.getElementById('costNote').value = decodeURIComponent(note);
-            updateNoteDisplay();
-        }
-
-        // Khôi phục danh sách người đi nhậu và số tiền tương ứng
-        if (mList) {
-            isHistoryMode = true;
-            const codes = mList.split(',');
-            members = JSON.parse(JSON.stringify(defaultMembers));
-
-            codes.forEach(codeStr => {
-                let parts = codeStr.split('_');
-                let mainCode = parts[0];
-                let customVal = parts.length > 2 ? parseFloat(parts[1]) : 0;
-                let flags = parts[parts.length - 1];
-
-                let isT1 = flags.includes('T1') || !flags.includes('T2');
-                let isT2 = flags.includes('T2');
-
-                if (mainCode === 'G') {
-                    const gName = decodeURIComponent(parts[1]);
-                    const gRole = parts[2];
-                    members.push({
-                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
-                        name: gName,
-                        role: gRole,
-                        selected: isT1,
-                        selectedT2: isT2,
-                        isGuest: true,
-                        historyAmount: customVal
-                    });
-                } else {
-                    const m = members.find(x => x.code === mainCode);
-                    if (m) {
-                        m.selected = isT1;
-                        m.selectedT2 = isT2;
-                        m.historyAmount = customVal;
-                    }
-                }
-            });
-        }
-
-        renderMembers();
-        closeHistoryModal();
-    } catch (err) {
-        console.error("Lỗi load dữ liệu:", err);
-        alert("Không thể tải lại chi tiết bữa nhậu này!");
-    }
-}
-    function initFromUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const name = urlParams.get('name');
-        const date = urlParams.get('date');
-        const loc = urlParams.get('loc');
-        const bill = urlParams.get('bill');
-        const b2 = urlParams.get('b2');
-        const fasm = urlParams.get('fasm');
-        const fss = urlParams.get('fss');
-        const note = urlParams.get('note');
-        const mList = urlParams.get('m');
-
-        if (name) {
-            let decodedName = decodeURIComponent(name);
-            document.getElementById('partyName').value = decodedName;
-            let decodedDate = cleanDateFormat(decodeURIComponent(date));
-            if (decodedDate) {
-                document.getElementById('partyDate').value = decodedDate;
-            }
-        }
-
-        if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
-        if (bill) document.getElementById('totalBill').value = bill;
-        if (b2) document.getElementById('tang2Bill').value = b2;
-        if (fasm !== null) document.getElementById('fixAsm').value = fasm;
-        if (fss !== null) document.getElementById('fixSs').value = fss;
-        if (note) {
-            document.getElementById('costNote').value = decodeURIComponent(note);
-            updateNoteDisplay();
-        }
-
-        if (mList) {
-            isHistoryMode = true;
-            const codes = mList.split(',');
-            members = JSON.parse(JSON.stringify(defaultMembers));
-            let loadedRows = [];
-
-            codes.forEach(codeStr => {
-                let parts = codeStr.split('_');
-                let mainCode = parts[0];
-                let customVal = parts.length > 2 ? parseFloat(parts[1]) : 0;
-                let flags = parts[parts.length - 1];
-
-                let isT1 = flags.includes('T1') || !flags.includes('T2');
-                let isT2 = flags.includes('T2');
-
-                if (mainCode === 'G') {
-                    const gName = decodeURIComponent(parts[1]);
-                    const gRole = parts[2];
-                    members.push({
-                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
-                        name: gName,
-                        role: gRole,
-                        selected: isT1,
-                        selectedT2: isT2,
-                        isGuest: true,
-                        historyAmount: customVal
-                    });
-                    loadedRows.push({ 'Tên người/NV': gName, 'Chức danh': gRole, 'Số tiền': customVal });
-                } else {
-                    const m = members.find(x => x.code === mainCode);
-                    if (m) {
-                        m.selected = isT1;
-                        m.selectedT2 = isT2;
-                        m.historyAmount = customVal;
-                        loadedRows.push({ 'Tên người/NV': m.name, 'Chức danh': m.role, 'Số tiền': customVal });
-                    }
-                }
-            });
-
-            if (name && date) {
-                let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-                let partyId = `${decodeURIComponent(name)}_${cleanDateFormat(decodeURIComponent(date))}`;
-                
-                let partyObj = {
-                    id: partyId,
-                    name: decodeURIComponent(name),
-                    date: cleanDateFormat(decodeURIComponent(date)),
-                    loc: decodeURIComponent(loc || 'N/A'),
-                    bill: parseFloat(bill) || 0,
-                    note: decodeURIComponent(note || ''),
-                    rows: loadedRows
-                };
-
-                extraList = extraList.filter(p => p.id !== partyId);
-                extraList.unshift(partyObj);
-                localStorage.setItem('party_history_extra', JSON.stringify(extraList));
-            }
-        }
-        renderMembers();
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        initFromUrlParams();
-        if (!new URLSearchParams(window.location.search).get('name')) {
-            switchMode('user');
-        }
-    });
 </script>
+
 </body>
 </html>
