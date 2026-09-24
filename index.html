@@ -846,6 +846,8 @@
             const billFormatted = billNum > 0 ? billNum.toLocaleString('vi-VN') + 'đ' : '0đ';
             const safeKey = encodeURIComponent(item.id);
 
+            const targetUrl = item.selectedCodes || '';
+            const safeUrl = encodeURIComponent(targetUrl);
             const html = `
                 <div class="history-item">
                     <div class="history-header-row">
@@ -854,71 +856,95 @@
                     <div class="history-info">📅 Ngày: ${item.date} | 📍 Nơi: ${item.loc}</div>
                     <div class="history-info">💰 Hóa đơn: <strong>${billFormatted}</strong></div>
                     ${item.note ? `<div class="history-info" style="color:#cf1322;">📝 Ghi chú: ${item.note}</div>` : ''}
-                    <button class="btn-copy-item" onclick="loadPartyFromSheet('${safeKey}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
+                    <button class="btn-copy-item" onclick="loadPartyFromUrl('${safeUrl}')">📂 Xem Lại Bữa Nhậu Này Trên App</button>
                 </div>
             `;
             container.innerHTML += html;
         });
     }
 
-    function loadPartyFromSheet(encodedKey) {
-        const key = decodeURIComponent(encodedKey);
-        let savedList = getCompleteDefaultHistory();
-        let extraList = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-        let allList = [...extraList, ...savedList];
-        
-        const targetParty = allList.find(p => p.id === key);
+    function loadPartyFromUrl(encodedUrl) {
+    const rawUrl = decodeURIComponent(encodedUrl);
+    if (!rawUrl) {
+        alert("Bữa nhậu này chưa có link dữ liệu chi tiết!");
+        return;
+    }
 
-        if (!targetParty) {
-            alert("Không tìm thấy thông tin chi tiết bữa nhậu này!");
-            return;
+    try {
+        // Trích xuất phần tham số đằng sau dấu ? (query string)
+        const queryString = rawUrl.includes('?') ? rawUrl.split('?')[1] : rawUrl;
+        const urlParams = new URLSearchParams(queryString);
+
+        // Đọc thông tin bữa nhậu từ link
+        const name = urlParams.get('name');
+        const date = urlParams.get('date');
+        const loc = urlParams.get('loc');
+        const bill = urlParams.get('bill');
+        const b2 = urlParams.get('b2');
+        const fasm = urlParams.get('fasm');
+        const fss = urlParams.get('fss');
+        const note = urlParams.get('note');
+        const mList = urlParams.get('m');
+
+        // Gán lại dữ liệu vào các ô nhập thông tin
+        if (name) document.getElementById('partyName').value = decodeURIComponent(name);
+        if (date) document.getElementById('partyDate').value = cleanDateFormat(decodeURIComponent(date));
+        if (loc) document.getElementById('partyLocation').value = decodeURIComponent(loc);
+        if (bill) document.getElementById('totalBill').value = bill;
+        if (b2) document.getElementById('tang2Bill').value = b2;
+        if (fasm !== null) document.getElementById('fixAsm').value = fasm;
+        if (fss !== null) document.getElementById('fixSs').value = fss;
+        
+        if (note) {
+            document.getElementById('costNote').value = decodeURIComponent(note);
+            updateNoteDisplay();
         }
 
-        isHistoryMode = true; 
+        // Khôi phục danh sách người đi nhậu và số tiền tương ứng
+        if (mList) {
+            isHistoryMode = true;
+            const codes = mList.split(',');
+            members = JSON.parse(JSON.stringify(defaultMembers));
 
-        document.getElementById('partyName').value = targetParty.name;
-        document.getElementById('partyDate').value = targetParty.date;
-        document.getElementById('partyLocation').value = targetParty.loc !== 'N/A' ? targetParty.loc : '';
-        document.getElementById('totalBill').value = targetParty.bill;
-        document.getElementById('costNote').value = targetParty.note;
-        updateNoteDisplay();
+            codes.forEach(codeStr => {
+                let parts = codeStr.split('_');
+                let mainCode = parts[0];
+                let customVal = parts.length > 2 ? parseFloat(parts[1]) : 0;
+                let flags = parts[parts.length - 1];
 
-        members = JSON.parse(JSON.stringify(defaultMembers));
-        members.forEach(m => {
-            m.selected = false;
-            m.selectedT2 = false;
-            m.historyAmount = 0;
-        });
+                let isT1 = flags.includes('T1') || !flags.includes('T2');
+                let isT2 = flags.includes('T2');
 
-        targetParty.rows.forEach(r => {
-            let personName = String(r['Tên người/NV'] || '').trim().toUpperCase();
-            let amt = parseFloat(r['Số tiền']) || 0;
-            let roleStr = r['Chức danh'] || '';
-
-            if (!personName || personName === 'TỔNG BỮA') return;
-
-            let matchedMember = members.find(m => m.name.toUpperCase() === personName);
-
-            if (matchedMember) {
-                matchedMember.selected = true;
-                matchedMember.historyAmount = amt;
-            } else {
-                members.push({
-                    code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
-                    name: personName,
-                    role: roleStr || 'KHÁCH',
-                    selected: true,
-                    selectedT2: false,
-                    isGuest: true,
-                    historyAmount: amt
-                });
-            }
-        });
+                if (mainCode === 'G') {
+                    const gName = decodeURIComponent(parts[1]);
+                    const gRole = parts[2];
+                    members.push({
+                        code: 'KHÁCH' + Math.floor(100 + Math.random() * 900),
+                        name: gName,
+                        role: gRole,
+                        selected: isT1,
+                        selectedT2: isT2,
+                        isGuest: true,
+                        historyAmount: customVal
+                    });
+                } else {
+                    const m = members.find(x => x.code === mainCode);
+                    if (m) {
+                        m.selected = isT1;
+                        m.selectedT2 = isT2;
+                        m.historyAmount = customVal;
+                    }
+                }
+            });
+        }
 
         renderMembers();
         closeHistoryModal();
+    } catch (err) {
+        console.error("Lỗi load dữ liệu:", err);
+        alert("Không thể tải lại chi tiết bữa nhậu này!");
     }
-
+}
     function initFromUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
         const name = urlParams.get('name');
