@@ -858,7 +858,7 @@ function preloadHistory() {
         ];
     }
 
-    // 1. Hàm mở Modal Lịch Sử
+    // Hàm mở Modal và load dữ liệu bằng JSONP chống CORS
 function openHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) modal.style.display = 'flex';
@@ -866,37 +866,106 @@ function openHistoryModal() {
     const container = document.getElementById('historyList');
     if (!container) return;
 
-    container.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b; font-size:14px;">⏳ Đang tải dữ liệu lịch sử...</div>';
+    container.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b; font-size:14px;">⏳ Đang tải dữ liệu từ Google Sheets...</div>';
 
-    // Tạo bộ đếm thời gian Timeout 4 giây
-    let isHandled = false;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-        controller.abort(); // Hủy request nếu quá 4s
-    }, 4000);
+    // Tạo tên callback ngẫu nhiên
+    const callbackName = 'handleHistoryData_' + Math.floor(Math.random() * 100000);
 
-    fetch(SCRIPT_URL, { signal: controller.signal })
-        .then(response => {
-            clearTimeout(timeoutId);
-            if (!response.ok) throw new Error('Network error');
-            return response.json();
-        })
-        .then(data => {
-            if (isHandled) return;
-            isHandled = true;
-            if (Array.isArray(data) && data.length > 0) {
-                renderHistoryList(data);
-            } else {
-                loadLocalHistory();
-            }
-        })
-        .catch(err => {
-            clearTimeout(timeoutId);
-            if (isHandled) return;
-            isHandled = true;
-            console.warn("Lấy dữ liệu Sheet quá lâu hoặc lỗi CORS, chuyển sang Local Cache:", err);
+    // Tạo hàm Callback hứng dữ liệu trả về
+    window[callbackName] = function(data) {
+        delete window[callbackName];
+        const oldScript = document.getElementById('jsonp_history_script');
+        if (oldScript) oldScript.remove();
+
+        if (Array.isArray(data) && data.length > 0) {
+            renderHistoryList(data);
+        } else {
             loadLocalHistory();
-        });
+        }
+    };
+
+    // Bắt lỗi nếu timeout / mất kết nối
+    const timeoutTimer = setTimeout(() => {
+        if (window[callbackName]) {
+            delete window[callbackName];
+            const oldScript = document.getElementById('jsonp_history_script');
+            if (oldScript) oldScript.remove();
+            console.warn("Lấy lịch sử quá lâu, fallback về Local Cache.");
+            loadLocalHistory();
+        }
+    }, 5000);
+
+    // Chèn thẻ Script động gửi request JSONP
+    const oldScript = document.getElementById('jsonp_history_script');
+    if (oldScript) oldScript.remove();
+
+    const script = document.createElement('script');
+    script.id = 'jsonp_history_script';
+    script.src = `${SCRIPT_URL}?callback=${callbackName}&_=${new Date().getTime()}`;
+    script.onerror = function() {
+        clearTimeout(timeoutTimer);
+        delete window[callbackName];
+        script.remove();
+        loadLocalHistory();
+    };
+
+    document.body.appendChild(script);
+}
+
+// Hàm tải lịch sử máy local
+function loadLocalHistory() {
+    let localHistory = [];
+    try {
+        localHistory = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
+    } catch(e) { localHistory = []; }
+
+    if (localHistory.length === 0 && typeof getCompleteDefaultHistory === 'function') {
+        localHistory = getCompleteDefaultHistory();
+    }
+    renderHistoryList(localHistory);
+}
+
+// Hàm render giao diện danh sách
+function renderHistoryList(list) {
+    const container = document.getElementById('historyList');
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:30px; color:#94a3b8;">
+                <p style="font-size:16px; margin-bottom:5px;">📭 Chưa có lịch sử bữa nhậu nào</p>
+                <span style="font-size:12px;">Hãy tạo bữa nhậu mới và bấm "Lưu Google Sheets" nhé!</span>
+            </div>`;
+        return;
+    }
+
+    let html = '';
+    list.forEach((item) => {
+        let displayDate = item.date ? formatDisplayDate(item.date) : 'N/A';
+        let totalBill = item.bill ? Number(item.bill).toLocaleString('vi-VN') + ' đ' : (item.totalBill ? Number(item.totalBill).toLocaleString('vi-VN') + ' đ' : '0 đ');
+        let memberCount = item.rows ? item.rows.length : (item.membersData ? item.membersData.length : 0);
+
+        html += `
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 15px; margin-bottom:12px; text-align:left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <strong style="color:#1e293b; font-size:15px;">🍻 ${item.name || item.partyName || 'Bữa nhậu'}</strong>
+                    <span style="background:#e0f2fe; color:#0369a1; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">${displayDate}</span>
+                </div>
+                <div style="font-size:13px; color:#475569; line-height:1.5;">
+                    <div>📍 <b>Địa điểm:</b> ${item.loc || item.location || 'Chưa cập nhật'}</div>
+                    <div>💰 <b>Tổng tiền:</b> <span style="color:#dc2626; font-weight:bold;">${totalBill}</span> (${memberCount} người)</div>
+                    ${(item.note || item.costNote) ? `<div>📝 <b>Ghi chú:</b> ${item.note || item.costNote}</div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) modal.style.display = 'none';
 }
 
     function loadLocalHistory() {
