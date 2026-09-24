@@ -866,36 +866,57 @@ function openHistoryModal() {
     const container = document.getElementById('historyList');
     if (!container) return;
 
-    container.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b; font-size:14px;">⏳ Đang tải dữ liệu từ Google Sheets...</div>';
+    container.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b; font-size:14px;">⏳ Đang tải dữ liệu lịch sử...</div>';
 
-    fetch(SCRIPT_URL)
+    // Tạo bộ đếm thời gian Timeout 4 giây
+    let isHandled = false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort(); // Hủy request nếu quá 4s
+    }, 4000);
+
+    fetch(SCRIPT_URL, { signal: controller.signal })
         .then(response => {
-            if (!response.ok) throw new Error('Lỗi mạng');
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error('Network error');
             return response.json();
         })
         .then(data => {
+            if (isHandled) return;
+            isHandled = true;
             if (Array.isArray(data) && data.length > 0) {
                 renderHistoryList(data);
             } else {
-                // Nếu Sheet chưa có dữ liệu, dùng dữ liệu Local Cache
-                let localHistory = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-                renderHistoryList(localHistory);
+                loadLocalHistory();
             }
         })
         .catch(err => {
-            console.error("Lỗi lấy lịch sử:", err);
-            let localHistory = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-            renderHistoryList(localHistory);
+            clearTimeout(timeoutId);
+            if (isHandled) return;
+            isHandled = true;
+            console.warn("Lấy dữ liệu Sheet quá lâu hoặc lỗi CORS, chuyển sang Local Cache:", err);
+            loadLocalHistory();
         });
 }
 
+    function loadLocalHistory() {
+    let localHistory = [];
+    try {
+        localHistory = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
+    } catch(e) { localHistory = []; }
+
+    if (localHistory.length === 0 && typeof getCompleteDefaultHistory === 'function') {
+        localHistory = getCompleteDefaultHistory();
+    }
+    renderHistoryList(localHistory);
+}
     // 3. Hàm đóng Modal
 function closeHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) modal.style.display = 'none';
 }
 
-    // 2. Hàm Render danh sách Lịch Sử (Đảm bảo không bị trắng trang)
+    // 3. Hàm Render danh sách Lịch Sử
 function renderHistoryList(list) {
     const container = document.getElementById('historyList');
     if (!container) return;
@@ -910,27 +931,33 @@ function renderHistoryList(list) {
     }
 
     let html = '';
-    list.forEach((item, index) => {
+    list.forEach((item) => {
         let displayDate = item.date ? formatDisplayDate(item.date) : 'N/A';
-        let totalBill = item.bill ? Number(item.bill).toLocaleString('vi-VN') + ' đ' : '0 đ';
-        let memberCount = item.rows ? item.rows.length : 0;
+        let totalBill = item.bill ? Number(item.bill).toLocaleString('vi-VN') + ' đ' : (item.totalBill ? Number(item.totalBill).toLocaleString('vi-VN') + ' đ' : '0 đ');
+        let memberCount = item.rows ? item.rows.length : (item.membersData ? item.membersData.length : 0);
 
         html += `
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 15px; margin-bottom:12px; text-align:left;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <strong style="color:#1e293b; font-size:15px;">🍻 ${item.name || 'Bữa nhậu'}</strong>
+                    <strong style="color:#1e293b; font-size:15px;">🍻 ${item.name || item.partyName || 'Bữa nhậu'}</strong>
                     <span style="background:#e0f2fe; color:#0369a1; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">${displayDate}</span>
                 </div>
                 <div style="font-size:13px; color:#475569; line-height:1.5;">
-                    <div>📍 <b>Địa điểm:</b> ${item.loc || 'Chưa cập nhật'}</div>
+                    <div>📍 <b>Địa điểm:</b> ${item.loc || item.location || 'Chưa cập nhật'}</div>
                     <div>💰 <b>Tổng tiền:</b> <span style="color:#dc2626; font-weight:bold;">${totalBill}</span> (${memberCount} người)</div>
-                    ${item.note ? `<div>📝 <b>Ghi chú:</b> ${item.note}</div>` : ''}
+                    ${(item.note || item.costNote) ? `<div>📝 <b>Ghi chú:</b> ${item.note || item.costNote}</div>` : ''}
                 </div>
             </div>
         `;
     });
 
     container.innerHTML = html;
+}
+
+// 4. Hàm đóng Modal
+function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) modal.style.display = 'none';
 }
 
     function loadPartyFromUrl(encodedUrl) {
