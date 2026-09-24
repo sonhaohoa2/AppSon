@@ -698,28 +698,84 @@ function preloadHistory() {
     }
 
     function saveToGoogleSheets() {
-        const payload = {
-            action: 'saveParty',
-            date: document.getElementById('partyDate').value,
-            partyName: document.getElementById('partyName').value,
-            location: document.getElementById('partyLocation').value,
-            totalBill: document.getElementById('totalBill').value,
-            tang2Bill: document.getElementById('tang2Bill').value,
-            costNote: document.getElementById('costNote').value,
-            members: members
-        };
-
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(() => {
-            alert('Đã lưu thông tin bữa nhậu lên Google Sheets!');
-        }).catch(err => {
-            alert('Lỗi khi kết nối Google Sheets: ' + err);
-        });
+    const partyDate = document.getElementById('partyDate').value;
+    const partyName = document.getElementById('partyName').value || 'Bữa nhậu Sales';
+    
+    if (!partyDate) {
+        alert("Vui lòng chọn Ngày nhậu trước khi lưu!");
+        return;
     }
+
+    // 1. Tính toán chính xác số tiền từng người đang hiển thị trên màn hình
+    const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+    const tang2Bill = parseFloat(document.getElementById('tang2Bill').value) || 0;
+    const fixAsm = parseFloat(document.getElementById('fixAsm').value) || 0;
+    const fixSs = parseFloat(document.getElementById('fixSs').value) || 0;
+
+    let selectedT1 = members.filter(m => m.selected);
+    let selectedT2 = members.filter(m => m.selectedT2);
+
+    let customSum = 0, asmCount = 0, ssCount = 0, srCount = 0;
+    selectedT1.forEach(m => {
+        if (m.customAmount !== undefined) customSum += m.customAmount;
+        else if (m.role === 'ASM') asmCount++;
+        else if (m.role === 'SS') ssCount++;
+        else srCount++;
+    });
+
+    let billRemaining = Math.max(0, totalBill - customSum - (asmCount * fixAsm) - (ssCount * fixSs));
+    let shareSR = srCount > 0 ? (billRemaining / srCount) : 0;
+    let shareT2 = selectedT2.length > 0 ? (tang2Bill / selectedT2.length) : 0;
+
+    // 2. Chỉ lọc lấy những người CÓ ĐI NHẬU (Tăng 1 hoặc Tăng 2) & gán số tiền chuẩn
+    let activeMembers = [];
+    members.forEach(m => {
+        if (m.selected || m.selectedT2) {
+            let pay = 0;
+            if (m.selected) {
+                if (m.customAmount !== undefined) pay += m.customAmount;
+                else if (m.role === 'ASM') pay += fixAsm;
+                else if (m.role === 'SS') pay += fixSs;
+                else pay += shareSR;
+            }
+            if (m.selectedT2) pay += shareT2;
+
+            activeMembers.push({
+                code: m.code,
+                name: m.name,
+                role: m.role,
+                amount: Math.round(pay)
+            });
+        }
+    });
+
+    if (activeMembers.length === 0) {
+        alert("Chưa có thành viên nào được chọn đi nhậu!");
+        return;
+    }
+
+    const payload = {
+        action: 'saveParty',
+        date: partyDate,
+        partyName: partyName,
+        location: document.getElementById('partyLocation').value,
+        totalBill: totalBill,
+        tang2Bill: tang2Bill,
+        costNote: document.getElementById('costNote').value,
+        members: activeMembers
+    };
+
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        alert('Đã lưu thông tin bữa nhậu lên Google Sheets thành công!');
+    }).catch(err => {
+        alert('Lỗi khi kết nối Google Sheets: ' + err);
+    });
+}
 
     function openHistoryModal() {
         document.getElementById('historyModal').style.display = 'flex';
