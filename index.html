@@ -1,18 +1,3 @@
-let cachedHistory = null; // Lưu dữ liệu lịch sử tải ngầm
-
-// Tải ngầm ngay khi app vừa load xong
-document.addEventListener('DOMContentLoaded', () => {
-    preloadHistory();
-});
-
-function preloadHistory() {
-    fetch(SCRIPT_URL + "?action=getHistory")
-        .then(response => response.json())
-        .then(data => {
-            cachedHistory = data;
-        })
-        .catch(err => console.log("Tải ngầm lịch sử chưa xong hoặc lỗi:", err));
-}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -271,6 +256,21 @@ function preloadHistory() {
     const ADMIN_PIN = "3979"; 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzv3jfnwtyJTq1ymTC27CNRcXVxf8v6w9qdmAT3xYlakZRE9bbPqOBqD1LIqLTlpnlr/exec"; 
 
+    let cachedHistory = null; // Lưu dữ liệu lịch sử tải ngầm
+
+// Tải ngầm ngay khi app vừa load xong
+document.addEventListener('DOMContentLoaded', () => {
+    preloadHistory();
+});
+
+function preloadHistory() {
+    fetch(SCRIPT_URL + "?action=getHistory")
+        .then(response => response.json())
+        .then(data => {
+            cachedHistory = data;
+        })
+        .catch(err => console.log("Tải ngầm lịch sử chưa xong hoặc lỗi:", err));
+}
     const defaultMembers = [
         { code: 'ABISF00067', name: 'HOÀNG CÔNG NHẬN', role: 'ASM', selected: false, isGuest: false, selectedT2: false },
         { code: 'ABISF00084', name: 'HOÀNG VĂN SƠN', role: 'SS', selected: false, isGuest: false, selectedT2: false },
