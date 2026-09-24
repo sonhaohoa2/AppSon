@@ -777,18 +777,17 @@ function preloadHistory() {
 
         fetch(SCRIPT_URL, {
             method: 'POST',
+            mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         })
-        .then(res => res.json())
-        .then(data => {
-            alert('✅ Đã lưu thành công lên Google Sheets!');
+        .then(() => {
+            alert('✅ Đã gửi dữ liệu thành công lên Google Sheets!');
             savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
         })
         .catch(err => {
-            // Dù trình duyệt chặn CORS thì dữ liệu vẫn đã gửi tới Sheet thành công
-            alert('✅ Đã gửi dữ liệu lên Google Sheets!');
-            savePartyToLocalCache(partyName, partyDate, location, totalBill + tang2Bill, costNote, selectedMembers, shareUrl);
+            alert('❌ Có lỗi xảy ra khi kết nối tới Server!');
+            console.error(err);
         });
     }
     function savePartyToLocalCache(name, date, loc, bill, note, membersArr, shareUrl) {
