@@ -858,7 +858,10 @@ function preloadHistory() {
         ];
     }
 
-    // 1. Hàm Mở Modal Lịch Sử (Tối ưu chống treo / Ngắt sau 2.5s)
+    // ==========================================
+// BỘ HÀM LỊCH SỬ BỮA NHẬU (LẤY CHUẨN TỪ GOOGLE SHEETS)
+// ==========================================
+
 function openHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) modal.style.display = 'flex';
@@ -866,21 +869,16 @@ function openHistoryModal() {
     const container = document.getElementById('historyList');
     if (!container) return;
 
-    container.innerHTML = '<div style="text-align:center; padding:25px; color:#64748b; font-size:14px;">⏳ Đang kiểm tra dữ liệu từ Google Sheets...</div>';
+    container.innerHTML = '<div style="text-align:center; padding:25px; color:#64748b; font-size:14px;">⏳ Đang đồng bộ lịch sử từ Google Sheets...</div>';
 
     let isFinished = false;
     const callbackName = 'cb_' + Date.now();
 
-    // Hàm nhận dữ liệu JSONP
     window[callbackName] = function(data) {
         if (isFinished) return;
         isFinished = true;
         clearScript();
-        if (Array.isArray(data) && data.length > 0) {
-            renderHistoryList(data);
-        } else {
-            loadLocalHistory();
-        }
+        renderHistoryList(data);
     };
 
     function clearScript() {
@@ -889,51 +887,27 @@ function openHistoryModal() {
         if (oldScript) oldScript.remove();
     }
 
-    // NẾU SAU 2.5 GIÂY KHÔNG CÓ PHẢN HỒI -> ÉP HIỂN THỊ DỮ LIỆU LOCAL/MẶC ĐỊNH NGAY (KHÔNG XOAY VÔ TẬN)
     setTimeout(() => {
         if (!isFinished) {
             isFinished = true;
             clearScript();
-            console.warn("Google Sheets phản hồi lâu, hiển thị dữ liệu bộ nhớ tạm.");
-            loadLocalHistory();
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">❌ Kết nối chậm, vui lòng thử lại!</div>';
         }
-    }, 2500);
+    }, 4000);
 
-    // Gửi Yêu Cầu lấy dữ liệu
-    if (SCRIPT_URL && SCRIPT_URL.startsWith("http")) {
-        const script = document.createElement('script');
-        script.id = 'jsonp_temp_script';
-        script.src = `${SCRIPT_URL}?action=getHistory&callback=${callbackName}&_=${Date.now()}`;
-        script.onerror = function() {
-            if (!isFinished) {
-                isFinished = true;
-                clearScript();
-                loadLocalHistory();
-            }
-        };
-        document.body.appendChild(script);
-    } else {
-        // Nếu chưa dán Link SCRIPT_URL thì tải ngay local
-        isFinished = true;
-        loadLocalHistory();
-    }
+    const script = document.createElement('script');
+    script.id = 'jsonp_temp_script';
+    script.src = `${SCRIPT_URL}?action=getHistory&callback=${callbackName}&_=${Date.now()}`;
+    script.onerror = function() {
+        if (!isFinished) {
+            isFinished = true;
+            clearScript();
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">❌ Lỗi tải dữ liệu. Vui lòng thử lại!</div>';
+        }
+    };
+    document.body.appendChild(script);
 }
 
-// 2. Tải Lịch sử lưu dưới máy hoặc Lịch sử mặc định
-function loadLocalHistory() {
-    let localHistory = [];
-    try {
-        localHistory = JSON.parse(localStorage.getItem('party_history_extra') || '[]');
-    } catch(e) { localHistory = []; }
-
-    if (localHistory.length === 0 && typeof getCompleteDefaultHistory === 'function') {
-        localHistory = getCompleteDefaultHistory();
-    }
-    renderHistoryList(localHistory);
-}
-
-// 3. Render danh sách bữa nhậu ra giao diện
-// 1. Hàm render danh sách Lịch Sử (Đã gộp bữa & Có nút Xem chi tiết)
 function renderHistoryList(list) {
     const container = document.getElementById('historyList');
     if (!container) return;
@@ -942,33 +916,30 @@ function renderHistoryList(list) {
         container.innerHTML = `
             <div style="text-align:center; padding:25px; color:#94a3b8;">
                 <p style="font-size:15px; margin-bottom:5px; font-weight:bold;">📭 Chưa có dữ liệu bữa nhậu</p>
-                <span style="font-size:12px;">Hãy tạo bữa nhậu mới và nhấn "Lưu Google Sheets" nhé!</span>
             </div>`;
         return;
     }
 
     let html = '';
     list.forEach((item, index) => {
-        let name = item.name || item.partyName || 'Bữa nhậu';
-        let date = item.date ? (typeof formatDisplayDate === 'function' ? formatDisplayDate(item.date) : item.date) : '---';
-        let loc = item.loc || item.location || 'Chưa cập nhật';
-        let billVal = item.bill || item.totalBill || 0;
+        let name = item.name || 'Bữa nhậu';
+        let date = item.date || '---';
+        let loc = item.loc || 'Chưa cập nhật';
+        let billVal = item.bill || 0;
         let bill = Number(billVal) ? Number(billVal).toLocaleString('vi-VN') + ' đ' : billVal + ' đ';
-        let members = item.members || item.rows || item.membersData || [];
+        let members = item.members || [];
         let detailsId = 'history_detail_' + index;
 
-        // Render từng thành viên đóng góp
         let memberRowsHtml = '';
         if (members.length > 0) {
             memberRowsHtml = members.map(m => {
-                let mName = m.name || m['Tên người/NV'] || 'Thành viên';
-                let mRole = m.role || m['Chức danh'] || '';
-                let mAmt = m.amount || m['Số tiền'] || 0;
-                let fmtAmt = Number(mAmt) ? Number(mAmt).toLocaleString('vi-VN') + ' đ' : mAmt;
+                let mName = m.name || 'Thành viên';
+                let mRole = m.role ? `(${m.role})` : '';
+                let mAmt = Number(m.amount) ? Number(m.amount).toLocaleString('vi-VN') + ' đ' : (m.amount || '0 đ');
                 return `
-                    <div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #e2e8f0; font-size:12px;">
-                        <span>👤 <b>${mName}</b> ${mRole ? `<small style="color:#64748b;">(${mRole})</small>` : ''}</span>
-                        <span style="color:#2563eb; font-weight:600;">${fmtAmt}</span>
+                    <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #e2e8f0; font-size:12px;">
+                        <span>👨‍💼 <b>${mName}</b> <small style="color:#64748b;">${mRole}</small></span>
+                        <span style="color:#2563eb; font-weight:bold;">${mAmt}</span>
                     </div>
                 `;
             }).join('');
@@ -977,7 +948,7 @@ function renderHistoryList(list) {
         }
 
         html += `
-            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:12px 14px; margin-bottom:12px; text-align:left; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+            <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:12px 14px; margin-bottom:12px; text-align:left;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <strong style="color:#0f172a; font-size:15px;">🍻 ${name}</strong>
                     <span style="background:#e0f2fe; color:#0369a1; font-size:11px; padding:2px 8px; border-radius:10px; font-weight:600;">${date}</span>
@@ -989,14 +960,13 @@ function renderHistoryList(list) {
                     ${item.note ? `<div>📝 <b>Ghi chú:</b> ${item.note}</div>` : ''}
                 </div>
 
-                <!-- Khung chi tiết từng người (ẩn/hện) -->
                 <div id="${detailsId}" style="display:none; margin-top:10px; padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
                     <div style="font-weight:bold; font-size:12px; margin-bottom:6px; color:#334155;">📋 CHI TIẾT THÀNH VIÊN & SỐ TIỀN:</div>
                     ${memberRowsHtml}
                 </div>
 
-                <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:8px;">
-                    <button onclick="toggleHistoryDetail('${detailsId}')" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">
+                <div style="margin-top:10px; text-align:right;">
+                    <button onclick="toggleHistoryDetail('${detailsId}')" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">
                         👁️ Xem chi tiết người đi
                     </button>
                 </div>
@@ -1007,7 +977,6 @@ function renderHistoryList(list) {
     container.innerHTML = html;
 }
 
-// 2. Hàm bật/tắt khung chi tiết từng bữa
 function toggleHistoryDetail(elementId) {
     const el = document.getElementById(elementId);
     if (el) {
@@ -1015,12 +984,10 @@ function toggleHistoryDetail(elementId) {
     }
 }
 
-// 4. Đóng Modal
 function closeHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) modal.style.display = 'none';
 }
-
 // 5. Hàm tải thông tin bữa nhậu từ Link
 function loadPartyFromUrl(encodedUrl) {
     const rawUrl = decodeURIComponent(encodedUrl);
