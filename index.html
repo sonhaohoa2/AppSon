@@ -657,6 +657,11 @@ function preloadHistory() {
     function toggleTag(el) { el.classList.toggle('selected'); }
 
     function sendFeedback() {
+        if (!new URLSearchParams(window.location.search).get('name')) {
+            alert('Chỉ gửi được ý kiến trong link chia tiền của một bữa nhậu cụ thể!');
+            return;
+        }
+        
         const name = document.getElementById('reviewerName').value.trim();
         const comment = document.getElementById('feedbackComment').value.trim();
         if (!name) { alert('Vui lòng nhập tên của bạn!'); return; }
